@@ -9,23 +9,14 @@ const errorHandler = require('./middleware/errorHandler');
 const setupRoutes = require('./routes');
 const setupSwagger = require('./swagger/setup');
 
-// Init
+
 const app = express();
 const port = process.env.PORT || 3000;
-
-// 1. Core middleware
 setupCoreMiddleware(app);
-
-// 2. Swagger UI
 setupSwagger(app);
-
-// 3. API Routes
 setupRoutes(app);
 
-// 4. Success Response Formatter
 app.use(responseFormatter);
-
-// 5. 404 handler
 app.use((req, res, next) => {
     const err = new Error('Not found');
     err.statusCode = 404;
@@ -33,10 +24,8 @@ app.use((req, res, next) => {
     next(err);
 });
 
-// 6. Centralized Error Handler
 app.use(errorHandler);
 
-// Start server
 const startServer = () => {
   const server = app.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`);
