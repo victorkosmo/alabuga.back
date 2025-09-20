@@ -22,19 +22,19 @@ const { isUUID } = require('validator');
  *         description: The unique UUID of the competency to update.
  *     requestBody:
  *       required: true
+ *       description: A JSON object containing the fields to update. At least one of `name` or `description` must be provided.
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required: [name]
  *             properties:
  *               name:
  *                 type: string
- *                 description: The updated name for the competency. Cannot be empty.
+ *                 description: The updated name for the competency. Cannot be empty if provided.
  *                 example: "Продвинутая Аналитика"
  *               description:
  *                 type: string
- *                 description: The updated description for the competency (optional).
+ *                 description: The updated description for the competency.
  *     responses:
  *       200:
  *         description: Competency updated successfully.
@@ -86,20 +86,42 @@ const updateCompetency = async (req, res, next) => {
             return next(err);
         }
 
-        if (!name || typeof name !== 'string' || name.trim() === '') {
-            const err = new Error('Name is required and cannot be empty');
+        // Validate that at least one field is being updated
+        if (name === undefined && description === undefined) {
+            const err = new Error('At least one field (name, description) must be provided for an update.');
             err.statusCode = 400;
             err.code = 'VALIDATION_ERROR';
             return next(err);
         }
 
-        const { rows } = await pool.query(
-            `UPDATE competencies
-             SET name = $1, description = $2, updated_at = NOW()
-             WHERE id = $3 AND deleted_at IS NULL
-             RETURNING *`,
-            [name.trim(), description, id]
-        );
+        // If name is provided, it cannot be an empty string
+        if (name !== undefined && (typeof name !== 'string' || name.trim() === '')) {
+            const err = new Error('Name, if provided, cannot be an empty string.');
+            err.statusCode = 400;
+            err.code = 'VALIDATION_ERROR';
+            return next(err);
+        }
+
+        const updateFields = [];
+        const queryParams = [];
+        let paramIndex = 1;
+
+        if (name !== undefined) {
+            updateFields.push(`name = $${paramIndex++}`);
+            queryParams.push(name.trim());
+        }
+
+        if (description !== undefined) {
+            updateFields.push(`description = $${paramIndex++}`);
+            queryParams.push(description);
+        }
+
+        updateFields.push(`updated_at = NOW()`);
+        queryParams.push(id);
+
+        const updateQuery = `UPDATE competencies SET ${updateFields.join(', ')} WHERE id = $${paramIndex} AND deleted_at IS NULL RETURNING *`;
+
+        const { rows } = await pool.query(updateQuery, queryParams);
 
         if (rows.length === 0) {
             const err = new Error(`Competency with ID ${id} not found.`);
@@ -114,7 +136,7 @@ const updateCompetency = async (req, res, next) => {
 
     } catch (err) {
         if (err.code === '23505' && err.constraint === 'competencies_name_key') {
-            const conflictError = new Error(`A competency with the name '${req.body.name.trim()}' already exists.`);
+            const conflictError = new Error(`A competency with the provided name already exists.`);
             conflictError.statusCode = 409;
             conflictError.code = 'COMPETENCY_NAME_CONFLICT';
             return next(conflictError);
