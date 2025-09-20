@@ -2,7 +2,7 @@ const pool = require('@db');
 
 /**
  * @swagger
- * /auth/me:
+ * /web/auth/me:
  *   get:
  *     tags:
  *       - Auth (Web)

@@ -2,10 +2,10 @@ const pool = require('@db');
 
 /**
  * @swagger
- * /api/users/count:
+ * /admin/users/count:
  *   get:
  *     tags:
- *       - api
+ *       - Admin
  *     summary: Get total number of users
  *     description: Returns the total count of active users (non-deleted accounts)
  *     security:

@@ -4,7 +4,7 @@ const { generateAccessToken, generateRefreshToken } = require('@services/authSer
 
 /**
  * @swagger
- * /auth/refresh:
+ * /web/auth/refresh:
  *   post:
  *     tags:
  *       - Auth (Web)

@@ -3,7 +3,7 @@ const { verifyPassword, generateAccessToken, generateRefreshToken } = require('@
 
 /**
  * @swagger
- * /auth/login:
+ * /web/auth/login:
  *   post:
  *     tags:
  *       - Auth (Web)
