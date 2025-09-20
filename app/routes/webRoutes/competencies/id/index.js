@@ -1,7 +1,5 @@
 // app/routes/webRoutes/competencies/id/index.js
 const express = require('express');
-// `mergeParams: true` is MANDATORY to grant this router access to
-// the `:id` parameter from its parent.
 const router = express.Router({ mergeParams: true });
 
 // Import handlers
