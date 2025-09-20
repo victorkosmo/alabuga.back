@@ -1,8 +1,7 @@
 // Import route files
 const webRouter = require('./webRoutes/index');
 const adminRouter = require('./adminRoutes/index');
-
-// TODO: const tmaRouter = require('./tmaRoutes/index');
+const tmaRouter = require('./tmaRoutes/index');
 
 const setupRoutes = (app) => {
     // Health check 
@@ -17,7 +16,7 @@ const setupRoutes = (app) => {
     // Register route groups
     app.use('/web', webRouter);
     app.use('/admin', adminRouter); 
-    // app.use('/tma', tmaRouter);
+    app.use('/telegram', tmaRouter);
 };
 
 module.exports = setupRoutes;
