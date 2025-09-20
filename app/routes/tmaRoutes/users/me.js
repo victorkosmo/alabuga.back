@@ -2,7 +2,7 @@ const pool = require('@db');
 
 /**
  * @swagger
- * /tma/users/me:
+ * /telegram/users/me:
  *   get:
  *     tags:
  *       - Users (TMA)
