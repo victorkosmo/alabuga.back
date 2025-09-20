@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateJWT } = require('@middleware/authenticateJWT');
+const { authenticateTmaJWT } = require('@middleware/authenticateTmaJWT');
 const getCurrentUser = require('./me');
 
-router.get('/me', authenticateJWT, getCurrentUser);
+router.get('/me', authenticateTmaJWT, getCurrentUser);
 
 module.exports = router;
