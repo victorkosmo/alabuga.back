@@ -44,13 +44,13 @@ router.use(authenticateJWT);
 // Import route handlers
 const listCompetencies = require('./list');
 const createCompetency = require('./post');
-// const idRouter = require('./id'); // For future use
+const idRouter = require('./id'); // For future use
 
 // Define routes
 router.get('/', listCompetencies);
 router.post('/', createCompetency);
 
 // Mount the dedicated sub-router for all /:id paths.
-// router.use('/:id', idRouter);
+router.use('/:id', idRouter);
 
 module.exports = router;
