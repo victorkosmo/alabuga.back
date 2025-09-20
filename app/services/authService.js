@@ -47,27 +47,29 @@ function verifyPassword(password, storedHash, storedSalt) {
 
 /**
  * Generates a JWT Access Token.
- * @param {object} user - User object containing id, email, username.
+ * @param {object} manager - Manager object from the database.
  * @returns {string} - The generated JWT Access Token.
  */
-function generateAccessToken(user) {
+function generateAccessToken(manager) {
     return jwt.sign({
-        userId: user.id,
-        email: user.email,
-        username: user.username
+        userId: manager.id,
+        email: manager.email,
+        fullName: manager.full_name,
+        role: manager.role
     }, JWT_SECRET, { expiresIn: '30m' });
 }
 
 /**
  * Generates a JWT Refresh Token.
- * @param {object} user - User object containing id, email, username.
+ * @param {object} manager - Manager object from the database.
  * @returns {string} - The generated JWT Refresh Token.
  */
-function generateRefreshToken(user) {
+function generateRefreshToken(manager) {
     return jwt.sign({
-        userId: user.id,
-        email: user.email,
-        username: user.username
+        userId: manager.id,
+        email: manager.email,
+        fullName: manager.full_name,
+        role: manager.role
     }, JWT_SECRET, { expiresIn: '7d' });
 }
 

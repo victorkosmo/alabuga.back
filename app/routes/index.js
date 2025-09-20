@@ -1,7 +1,8 @@
 // Import route files
-const authRouter = require('./webRoutes/auth/index');
-const boilerplateRouter = require('./webRoutes/boilerplate_entity/index');
+const webRouter = require('./webRoutes/index');
 const adminRouter = require('./adminRoutes/index');
+
+// TODO: const tmaRouter = require('./tmaRoutes/index');
 
 const setupRoutes = (app) => {
     // Health check 
@@ -13,10 +14,10 @@ const setupRoutes = (app) => {
         next();
     });
 
-    // Register routes
-    app.use('/auth', authRouter);
-    app.use('/boilerplate_entity', boilerplateRouter);
-    app.use('/admin', adminRouter);
+    // Register route groups
+    app.use('/web', webRouter);
+    app.use('/admin', adminRouter); 
+    // app.use('/tma', tmaRouter);
 };
 
 module.exports = setupRoutes;

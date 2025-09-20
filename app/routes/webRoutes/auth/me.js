@@ -5,14 +5,14 @@ const pool = require('@db');
  * /auth/me:
  *   get:
  *     tags:
- *       - auth
- *     summary: Get current user details
- *     description: Retrieve the currently authenticated user's details
+ *       - Auth (Web)
+ *     summary: Get current manager details
+ *     description: Retrieve the currently authenticated manager's details from their JWT.
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: User details retrieved successfully
+ *         description: Manager details retrieved successfully
  *         content:
  *           application/json:
  *             schema:
@@ -31,12 +31,15 @@ const pool = require('@db');
  *                     email:
  *                       type: string
  *                       example: "user@example.com"
- *                     username:
+ *                     full_name:
  *                       type: string
- *                       example: "john_doe"
+ *                       example: "John Doe"
+ *                     role:
+ *                       type: string
+ *                       example: "ADMIN"
  *                 message:
  *                   type: string
- *                   example: "User details retrieved"
+ *                   example: "Manager details retrieved"
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  *       404:
@@ -50,19 +53,19 @@ const getCurrentUser = async (req, res, next) => {
         const user = req.user;
 
         const { rows } = await pool.query(
-            'SELECT id, email, username FROM users WHERE id = $1 AND deleted_at IS NULL',
+            'SELECT id, email, full_name, role FROM managers WHERE id = $1 AND deleted_at IS NULL',
             [user.userId]
         );
 
         if (rows.length === 0) {
-            const err = new Error('User not found');
+            const err = new Error('Manager not found');
             err.statusCode = 404;
-            err.code = 'USER_NOT_FOUND';
+            err.code = 'MANAGER_NOT_FOUND';
             return next(err);
         }
 
         res.locals.data = rows[0];
-        res.locals.message = 'User details retrieved';
+        res.locals.message = 'Manager details retrieved';
         next();
     } catch (err) {
         next(err);

@@ -36,8 +36,23 @@ const authenticateJWT = (req, res, next) => {
       
       return next(error);
     }
-    
-    req.user = decoded;
+
+    // Validate that the token payload contains the required fields for a manager
+    if (!decoded.userId || !decoded.email || !decoded.fullName || !decoded.role) {
+        const payloadError = new Error('Malformed authentication data');
+        payloadError.statusCode = 401;
+        payloadError.code = 'INVALID_TOKEN_PAYLOAD';
+        return next(payloadError);
+    }
+
+    // Attach validated user info to the request object
+    req.user = {
+        userId: decoded.userId,
+        email: decoded.email,
+        fullName: decoded.fullName,
+        role: decoded.role
+    };
+
     next();
   });
 };

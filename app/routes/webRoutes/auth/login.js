@@ -6,9 +6,9 @@ const { verifyPassword, generateAccessToken, generateRefreshToken } = require('@
  * /auth/login:
  *   post:
  *     tags:
- *       - auth
- *     summary: Login user
- *     description: Authenticate user and return access and refresh tokens
+ *       - Auth (Web)
+ *     summary: Login manager
+ *     description: Authenticate a manager for the web dashboard and return access and refresh tokens.
  *     requestBody:
  *       required: true
  *       content:
@@ -65,7 +65,7 @@ const loginUser = async (req, res, next) => {
         }
 
         const { rows } = await pool.query(
-            'SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL',
+            'SELECT id, email, full_name, role, password, password_salt FROM managers WHERE email = $1 AND deleted_at IS NULL',
             [email]
         );
 
@@ -76,10 +76,10 @@ const loginUser = async (req, res, next) => {
             return next(err);
         }
 
-        const user = rows[0];
+        const manager = rows[0];
 
         // Verify password
-        const isPasswordValid = verifyPassword(password, user.password, user.password_salt);
+        const isPasswordValid = verifyPassword(password, manager.password, manager.password_salt);
 
         if (!isPasswordValid) {
             const err = new Error('Invalid email or password');
@@ -88,8 +88,8 @@ const loginUser = async (req, res, next) => {
             return next(err);
         }
 
-        const accessToken = generateAccessToken(user);
-        const refreshToken = generateRefreshToken(user);
+        const accessToken = generateAccessToken(manager);
+        const refreshToken = generateRefreshToken(manager);
 
         res.locals.data = {
             access: accessToken,

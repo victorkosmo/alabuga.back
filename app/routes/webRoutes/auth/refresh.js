@@ -7,8 +7,8 @@ const { generateAccessToken, generateRefreshToken } = require('@services/authSer
  * /auth/refresh:
  *   post:
  *     tags:
- *       - auth
- *     summary: Refresh access and refresh tokens
+ *       - Auth (Web)
+ *     summary: Refresh manager tokens
  *     description: Refresh access and refresh tokens using a valid refresh token
  *     requestBody:
  *       required: true
@@ -79,20 +79,20 @@ const refreshTokens = async (req, res, next) => {
         });
 
         const { rows } = await pool.query(
-            'SELECT id, email FROM users WHERE id = $1 AND deleted_at IS NULL',
+            'SELECT id, email, full_name, role FROM managers WHERE id = $1 AND deleted_at IS NULL',
             [decoded.userId]
         );
 
         if (rows.length === 0) {
-            const err = new Error('User not found');
+            const err = new Error('Manager not found');
             err.statusCode = 404;
-            err.code = 'USER_NOT_FOUND';
+            err.code = 'MANAGER_NOT_FOUND';
             return next(err);
         }
 
-        const user = rows[0];
-        const accessToken = generateAccessToken(user);
-        const refreshToken = generateRefreshToken(user);
+        const manager = rows[0];
+        const accessToken = generateAccessToken(manager);
+        const refreshToken = generateRefreshToken(manager);
 
         res.locals.data = {
             access: accessToken,
