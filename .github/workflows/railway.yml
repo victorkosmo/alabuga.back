@@ -1,0 +1,48 @@
+#
+# GitHub Action to deploy a specific service to a Railway environment.
+# This workflow runs when a new Release is published on GitHub.
+# It installs the Railway CLI manually and uses a Project Token for authentication.
+#
+
+name: Deploy to Railway Production
+
+on:
+  # Trigger this workflow only when a new release is officially published.
+  release:
+    types: [published]
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+
+    # Environment variables available to all steps in this job.
+    env:
+      # Set the target Railway environment.
+      RAILWAY_ENVIRONMENT_NAME: 'prod'
+
+    steps:
+      # Step 1: Get the repository code that corresponds to the release tag.
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step 2: Set up the Node.js runtime, which is required to install the Railway CLI.
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Using a recent LTS version of Node.js
+
+      # Step 3: Install the official Railway CLI package from npm.
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      # Step 4: Execute the deployment command.
+      - name: Deploy to Railway
+        # The 'run' command executes the CLI. The '--detach' flag is recommended for CI
+        # to prevent the action from hanging while waiting for logs.
+        run: railway up --service ${{ vars.RAILWAY_SERVICE_ID }} --detach
+        env:
+          # Provide the Project Token to the CLI for authentication.
+          # This token is stored securely in GitHub Secrets.
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+

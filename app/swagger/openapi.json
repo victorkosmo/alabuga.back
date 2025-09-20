@@ -1,0 +1,151 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "API Gateway",
+    "version": "1.0.0",
+    "description": "API implementing standardized success and error responses."
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Local development server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "apiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key",
+        "description": "API key for external service authentication"
+      }
+    },
+
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "required": ["success", "error", "data"],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false,
+            "description": "Indicates if the request was successful."
+          },
+          "error": {
+            "type": "object",
+            "required": ["code", "message"],
+            "properties": {
+              "code": {
+                "type": "string",
+                "example": "ERROR_CODE",
+                "description": "A machine-readable error code (can be generic like 'ERROR' or specific like 'VALIDATION_ERROR')."
+              },
+              "message": {
+                "type": "string",
+                "example": "A description of the error.",
+                "description": "A human-readable description of the error."
+              }
+            }
+          },
+          "data": {
+            "type": "null",
+            "example": null,
+            "description": "Always null for error responses."
+          }
+        }
+      },
+
+      "Pagination": {
+          "type": "object",
+          "description": "Metadata object for paginated responses.",
+          "required": ["page", "limit", "total", "pages"],
+          "properties": {
+            "page": {
+              "type": "integer",
+              "example": 1,
+              "description": "The current page number."
+            },
+            "limit": {
+              "type": "integer",
+              "example": 10,
+              "description": "The number of items requested per page."
+            },
+            "total": {
+              "type": "integer",
+              "example": 153,
+              "description": "Total number of items available."
+            },
+            "pages": {
+              "type": "integer",
+              "example": 16,
+              "description": "Total number of pages available."
+            }
+          }
+      }
+    },
+
+    "responses": {
+      "BadRequestError": {
+        "description": "Bad Request - The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "UnauthorizedError": {
+        "description": "Unauthorized - Authentication is required and has failed or has not yet been provided.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ForbiddenError": {
+        "description": "Forbidden - The server understood the request but refuses to authorize it. Authentication may not help.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+       "NotFoundError": {
+        "description": "Not Found - The server cannot find the requested resource.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "InternalServerError": {
+        "description": "Internal Server Error - The server encountered an unexpected condition that prevented it from fulfilling the request.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {}
+}

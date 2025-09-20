@@ -1,0 +1,232 @@
+// ============================================================
+// DBML Schema for "Alabuga: Cosmic Ascent" Gamification Platform
+// Project: Hackathon MVP
+// Target Interface (Users): Telegram Mini App
+// Target Interface (Admins): Web Application
+// ============================================================
+
+// Enum for the status of a mission completion that requires moderation
+Enum "mission_completion_status" {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+
+// Enum for the rarity of an artifact
+Enum "artifact_rarity" {
+  COMMON
+  RARE
+  EPIC
+  LEGENDARY
+}
+
+// Enum for manager roles (HR, Organizer, etc.)
+Enum "manager_role" {
+  HR
+  ORGANIZER
+  ADMIN
+}
+
+// Enum for the status of an order in the store
+Enum "order_status" {
+  PENDING
+  FULFILLED
+  CANCELLED
+}
+// ENUM mission type
+Enum "mission_completion_type" {
+  DEFAULT // Default interaction, e.g., form submission, API call
+  QR_TRIGGER // Completed by scanning a specific QR code
+}
+
+
+// -------------------------------------------------------------
+// --- Core Entities: Users (Players) & Managers (Admins)    ---
+// -------------------------------------------------------------
+
+// Users (candidates/employees) interacting via Telegram Mini App
+Table "users" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`, note: 'Primary key, UUID.']
+  "tg_id" bigint [unique, not null, note: 'Telegram user ID, the main identifier.']
+  "username" varchar(255) [null, note: 'Telegram username (@handle).']
+  "first_name" varchar(255) [not null, note: 'Users first name from Telegram.']
+  "last_name" varchar(255) [null, note: 'Users last name from Telegram.']
+  "avatar_url" text [null, note: 'URL to the user profile picture.']
+
+  // --- Game-related Fields ---
+  "rank_id" uuid [ref: > ranks.id, not null, note: 'Current rank of the user.']
+  "experience_points" integer [not null, default: 0, note: 'Experience points (Опыт) for ranking up.']
+  "mana_points" integer [not null, default: 0, note: 'Currency (Мана) to spend in the store.']
+
+  // --- Timestamps ---
+  "created_at" timestamp [not null, default: `now()`, note: 'Timestamp of user creation.']
+  "updated_at" timestamp [not null, default: `now()`, note: 'Timestamp of last update.']
+  "deleted_at" timestamp [null, note: 'Timestamp for soft deletion.']
+}
+
+// Managers (HR, Organizers) interacting via a separate Web App
+Table "managers" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "email" varchar(255) [unique, not null, note: 'Login email for the admin panel.']
+  "full_name" varchar(255) [not null]
+  "password" bytea [not null, note: 'Hashed password stored as byte array.']
+  "password_salt" bytea [not null, note: 'Salt for password hashing.']
+  "role" manager_role [not null, note: 'Defines permissions (HR, Organizer, Admin).']
+
+  // --- Timestamps ---
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+  "deleted_at" timestamp [null]
+}
+
+
+// -------------------------------------------------------------
+// --- Game Logic Entities                                   ---
+// -------------------------------------------------------------
+
+// Game ranks and the conditions to achieve them
+Table "ranks" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "title" varchar(255) [unique, not null, note: 'Name of the rank, e.g., "Искатель", "Пилот-кандидат".']
+  "sequence_order" integer [unique, not null, note: 'Defines the linear progression of ranks.']
+  "unlock_conditions" jsonb [not null, note: 'JSON object with conditions to unlock this rank. E.g., {"required_experience": 500, "required_missions": ["uuid1", "uuid2"], "required_competencies": [{"id": "uuid", "level": 1}] }']
+  
+  // --- Timestamps ---
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+  "deleted_at" timestamp [null]
+}
+
+// Skills/competencies that users can develop
+Table "competencies" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "name" varchar(255) [unique, not null, note: 'Name of the competency, e.g., "Общение", "Аналитика".']
+  "description" text [null]
+
+  // --- Timestamps ---
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+  "deleted_at" timestamp [null]
+}
+
+// Join table to track each user's progress in each competency
+Table "user_competencies" {
+  "user_id" uuid [ref: > users.id, not null]
+  "competency_id" uuid [ref: > competencies.id, not null]
+  "level" integer [not null, default: 0, note: 'The current level of the competency for the user.']
+  "progress_points" integer [not null, default: 0, note: 'Points accumulated towards the next level.']
+  
+  Indexes {
+    (user_id, competency_id) [pk]
+  }
+}
+
+// Missions (tasks) available to users
+Table "missions" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "title" varchar(255) [not null]
+  "description" text [null]
+  "category" varchar(100) [not null, note: 'Category for mission branching, e.g., "Квесты", "Рекрутинг".']
+  "required_rank_id" uuid [ref: > ranks.id, not null, note: 'The minimum rank required to access this mission.']
+  
+  // --- Rewards & Effects ---
+  "experience_reward" integer [not null, default: 0]
+  "mana_reward" integer [not null, default: 0]
+  "competency_rewards" jsonb [null, note: 'JSON array of competency points awarded. E.g., [{"competency_id": "uuid", "points": 50}]']
+  "awarded_artifact_id" uuid [ref: > artifacts.id, null, note: 'An optional artifact awarded upon completion.']
+
+  // --- Logic ---
+  "needs_moderation" boolean [not null, default: false, note: 'If true, a manager must approve the completion.']
+  "completion_type" mission_completion_type [not null, default: 'DEFAULT', note: 'Specifies how the mission is completed.']
+  "created_by" uuid [ref: > managers.id, not null, note: 'The manager who created this mission.']
+  
+  // --- Timestamps ---
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+  "deleted_at" timestamp [null]
+}
+
+// Log of users completing missions
+Table "mission_completions" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "user_id" uuid [ref: > users.id, not null]
+  "mission_id" uuid [ref: > missions.id, not null]
+  "status" mission_completion_status [not null, default: 'APPROVED', note: 'Status, esp. for moderated missions.']
+  "result_data" text [null, note: 'Data submitted by the user (e.g., text, URL to a file).']
+  "moderator_id" uuid [ref: > managers.id, null, note: 'The manager who reviewed this completion.']
+  "moderator_comment" text [null, note: 'Feedback from the moderator on rejection.']
+  
+  // --- Timestamps ---
+  "created_at" timestamp [not null, default: `now()`, note: 'Timestamp of when the user submitted the completion.']
+  "updated_at" timestamp [not null, default: `now()`, note: 'Timestamp of the last status change.']
+}
+
+
+// --- Collectibles: Artifacts & Store -----------------------
+
+// Unique collectible badges/rewards
+Table "artifacts" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "name" varchar(255) [unique, not null]
+  "description" text [not null]
+  "image_url" text [not null]
+  "rarity" artifact_rarity [not null, default: 'COMMON']
+  
+  // --- Timestamps ---
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+  "deleted_at" timestamp [null]
+}
+
+// Join table for artifacts earned by users
+Table "user_artifacts" {
+  "user_id" uuid [ref: > users.id, not null]
+  "artifact_id" uuid [ref: > artifacts.id, not null]
+  "awarded_at" timestamp [not null, default: `now()`]
+  
+  Indexes {
+    (user_id, artifact_id) [pk, note: 'Assuming a user can only have one of each artifact.']
+  }
+}
+
+// Items available for purchase in the store (Хранилище)
+Table "store_items" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "name" varchar(255) [not null]
+  "description" text
+  "image_url" text
+  "cost" integer [not null, note: 'Price in mana_points.']
+  "quantity" integer [null, note: 'Available stock. NULL for infinite items (e.g., digital goods).']
+  "is_active" boolean [not null, default: true, note: 'Toggles visibility in the store.']
+  
+  // --- Timestamps ---
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+  "deleted_at" timestamp [null]
+}
+
+// Log of user purchases from the store
+Table "orders" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "user_id" uuid [ref: > users.id, not null]
+  "item_id" uuid [ref: > store_items.id, not null]
+  "points_spent" integer [not null, note: 'Price at the time of purchase.']
+  "status" order_status [not null, default: 'PENDING']
+  
+  // --- Timestamps ---
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+}
+
+// Represents a unique, scannable QR code for offline events.
+Table "qr_triggers" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "name" varchar(255) [not null, note: 'Admin-facing name for the trigger, e.g., "Forum Day 1 - Main Stage Check-in".']
+  "mission_id" uuid [ref: > missions.id, not null, note: 'The mission that gets completed when this trigger is activated.']
+  "is_active" boolean [not null, default: true, note: 'Allows admins to enable/disable a QR code without deleting it.']
+  
+  // --- Timestamps ---
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+  "deleted_at" timestamp [null]
+}
