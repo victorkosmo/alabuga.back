@@ -10,11 +10,11 @@ const DEV_USER_TG_ID = 99988877766;
  *   post:
  *     tags:
  *       - Auth (TMA)
- *     summary: Authenticate as a pre-defined developer user (DEV ONLY)
+ *     summary: Authenticate as a pre-defined developer user (DEV/TESTING)
  *     description: >
  *       Provides authentication tokens for a hardcoded developer user.
- *       This endpoint is only available when `NODE_ENV` is 'development'.
- *       It bypasses Telegram `initData` validation for local development.
+ *       It bypasses Telegram `initData` validation for local development and testing.
+ *       WARNING: This is an insecure endpoint and should be protected or disabled in production.
  *     responses:
  *       200:
  *         description: Developer authentication successful.
@@ -38,22 +38,12 @@ const DEV_USER_TG_ID = 99988877766;
  *                 message:
  *                   type: string
  *                   example: "Developer login successful"
- *       403:
- *         description: Forbidden. This endpoint is not available in the current environment.
  *       404:
  *         description: Developer user not found in the database.
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
 const tmaDevLogin = async (req, res, next) => {
-    // This route should only be available in development
-    if (process.env.NODE_ENV !== 'development') {
-        const err = new Error('This endpoint is only available in development mode.');
-        err.statusCode = 403;
-        err.code = 'FORBIDDEN_ENDPOINT';
-        return next(err);
-    }
-
     try {
         // Find the hardcoded developer user by their tg_id
         const { rows: users } = await pool.query(
