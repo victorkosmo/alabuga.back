@@ -39,6 +39,15 @@ Enum "mission_completion_type" {
   QR_TRIGGER // Completed by scanning a specific QR code
 }
 
+// Enum for the status of a campaign
+Enum "campaign_status" {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  ARCHIVED
+}
+
 
 // -------------------------------------------------------------
 // --- Core Entities: Users (Players) & Managers (Admins)    ---
@@ -121,9 +130,68 @@ Table "user_competencies" {
   }
 }
 
+// Campaigns for event-driven, invite-only mission funnels
+Table "campaigns" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`, note: 'Primary key for the campaign.']
+  "title" varchar(255) [not null, note: 'Display name of the campaign visible to admins and users.']
+  "description" text [null, note: 'Detailed description of the campaign purpose and goals.']
+  "activation_code" varchar(50) [unique, not null, note: 'Unique code that users enter to join this campaign. Serves as entry point.']
+  "status" campaign_status [not null, default: 'DRAFT', note: 'Current status of the campaign lifecycle.']
+  "start_date" timestamp [null, note: 'When the campaign becomes active and users can join.']
+  "end_date" timestamp [null, note: 'When the campaign closes and no new participants can join.']
+  "max_participants" integer [null, note: 'Maximum number of users who can join this campaign. NULL for unlimited.']
+  "created_by" uuid [ref: > managers.id, not null, note: 'The manager who created this campaign.']
+  "metadata" jsonb [null, note: 'Additional campaign-specific settings and configuration data.']
+  "created_at" timestamp [not null, default: `now()`, note: 'Timestamp when the campaign was created.']
+  "updated_at" timestamp [not null, default: `now()`, note: 'Timestamp when the campaign was last modified.']
+  "deleted_at" timestamp [null, note: 'Timestamp for soft deletion of campaigns.']
+
+  Indexes {
+    activation_code
+    status
+    (start_date, end_date)
+    created_by
+  }
+}
+
+// Join table for users participating in campaigns
+Table "user_campaigns" {
+  "user_id" uuid [ref: > users.id, not null, note: 'The user who joined the campaign.']
+  "campaign_id" uuid [ref: > campaigns.id, not null, note: 'The campaign the user has joined.']
+  "joined_at" timestamp [not null, default: `now()`, note: 'When the user joined this campaign.']
+  "is_active" boolean [not null, default: true, note: 'Whether the user is still active in this campaign.']
+  "join_metadata" jsonb [null, note: 'Additional data captured when user joined (referral source, etc.).']
+
+  Indexes {
+    (user_id, campaign_id) [pk, name: 'pk_user_campaigns']
+    campaign_id
+    joined_at
+    (campaign_id, is_active)
+  }
+}
+
+// Templates for campaigns
+Table "campaign_templates" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`, note: 'Primary key for the campaign template.']
+  "name" varchar(255) [not null, note: 'Name of the template for admin identification.']
+  "description" text [null, note: 'Description of what this template is designed for.']
+  "template_data" jsonb [not null, note: 'JSON structure containing the campaign configuration and mission definitions.']
+  "created_by" uuid [ref: > managers.id, not null, note: 'The manager who created this template.']
+  "is_public" boolean [not null, default: false, note: 'Whether this template can be used by other managers.']
+  "created_at" timestamp [not null, default: `now()`, note: 'When the template was created.']
+  "updated_at" timestamp [not null, default: `now()`, note: 'When the template was last modified.']
+  "deleted_at" timestamp [null, note: 'Timestamp for soft deletion of templates.']
+
+  Indexes {
+    created_by
+    is_public
+  }
+}
+
 // Missions (tasks) available to users
 Table "missions" {
   "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "campaign_id" uuid [ref: > campaigns.id, not null, note: 'The campaign this mission belongs to. Every mission must be part of a campaign.']
   "title" varchar(255) [not null]
   "description" text [null]
   "category" varchar(100) [not null, note: 'Category for mission branching, e.g., "Квесты", "Рекрутинг".']
@@ -144,6 +212,10 @@ Table "missions" {
   "created_at" timestamp [not null, default: `now()`]
   "updated_at" timestamp [not null, default: `now()`]
   "deleted_at" timestamp [null]
+
+  Indexes {
+    campaign_id
+  }
 }
 
 // Log of users completing missions
@@ -223,10 +295,15 @@ Table "qr_triggers" {
   "id" uuid [pk, not null, default: `gen_random_uuid()`]
   "name" varchar(255) [not null, note: 'Admin-facing name for the trigger, e.g., "Forum Day 1 - Main Stage Check-in".']
   "mission_id" uuid [ref: > missions.id, not null, note: 'The mission that gets completed when this trigger is activated.']
+  "campaign_id" uuid [ref: > campaigns.id, null, note: 'Optional campaign association for QR codes that auto-join users to campaigns.']
   "is_active" boolean [not null, default: true, note: 'Allows admins to enable/disable a QR code without deleting it.']
   
   // --- Timestamps ---
   "created_at" timestamp [not null, default: `now()`]
   "updated_at" timestamp [not null, default: `now()`]
   "deleted_at" timestamp [null]
+
+  Indexes {
+    campaign_id
+  }
 }
