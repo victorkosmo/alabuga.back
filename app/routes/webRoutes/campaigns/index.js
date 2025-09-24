@@ -29,8 +29,8 @@ router.use(authenticateJWT);
  *           example: "Кампания по онбордингу и вовлечению новых стажеров."
  *         activation_code:
  *           type: string
- *           description: The unique 6-character code users enter to join the campaign.
- *           example: "SUMMER"
+ *           description: The unique 6-digit code (XXX-XXX) users enter to join the campaign.
+ *           example: "123-456"
  *         status:
  *           type: string
  *           enum: [DRAFT, ACTIVE, PAUSED, COMPLETED, ARCHIVED]
