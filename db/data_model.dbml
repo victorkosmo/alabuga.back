@@ -33,10 +33,11 @@ Enum "order_status" {
   FULFILLED
   CANCELLED
 }
-// ENUM mission type
-Enum "mission_completion_type" {
-  DEFAULT // Default interaction, e.g., form submission, API call
-  QR_TRIGGER // Completed by scanning a specific QR code
+// ENUM for different mission types, defining their completion logic
+Enum "mission_type" {
+  MANUAL_URL // Mission completed by submitting a URL, potentially requiring moderation
+  QUIZ // Mission completed by passing a quiz
+  QR_CODE // Mission completed by scanning a specific QR code
 }
 
 // Enum for the status of a campaign
@@ -204,8 +205,7 @@ Table "missions" {
   "awarded_artifact_id" uuid [ref: > artifacts.id, null, note: 'An optional artifact awarded upon completion.']
 
   // --- Logic ---
-  "needs_moderation" boolean [not null, default: false, note: 'If true, a manager must approve the completion.']
-  "completion_type" mission_completion_type [not null, default: 'DEFAULT', note: 'Specifies how the mission is completed.']
+  "type" mission_type [not null, note: 'Defines the completion logic for the mission (e.g., QUIZ, MANUAL_URL).']
   "created_by" uuid [ref: > managers.id, not null, note: 'The manager who created this mission.']
   
   // --- Timestamps ---
@@ -216,6 +216,20 @@ Table "missions" {
   Indexes {
     campaign_id
   }
+}
+
+// Dedicated table for Quiz mission details.
+Table "mission_quiz_details" {
+  "mission_id" uuid [pk, ref: > missions.id, not null, note: 'Foreign key linking to the specific mission.']
+  "questions" jsonb [not null, note: 'JSON array defining the quiz questions, answers, and correct answer IDs.']
+  "pass_threshold" float [not null, default: 1.0, note: 'Fraction of correct answers required to pass the quiz (e.g., 0.8 for 80%).']
+}
+
+// Dedicated table for Manual URL submission mission details.
+Table "mission_manual_details" {
+  "mission_id" uuid [pk, ref: > missions.id, not null, note: 'Foreign key linking to the specific mission.']
+  "submission_prompt" text [not null, note: 'The specific instructions or prompt displayed to the user for the submission.']
+  "placeholder_text" varchar(255) [null, note: 'Placeholder text for the URL input field (e.g., "https://github.com/...").']
 }
 
 // Log of users completing missions
