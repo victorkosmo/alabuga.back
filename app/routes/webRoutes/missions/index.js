@@ -5,6 +5,8 @@ const { authenticateJWT } = require('@middleware/authenticateJWT');
 
 // Import sub-routers
 const typeUrlRouter = require('./typeUrl');
+// Import route handlers
+const getMissionTypes = require('./types');
 
 // Authentication middleware for all mission routes
 router.use(authenticateJWT);
@@ -59,6 +61,9 @@ router.use(authenticateJWT);
  *       enum: [MANUAL_URL, QUIZ, QR_CODE]
  *       description: The type of logic used to complete the mission.
  */
+
+// Route to get supported mission types
+router.get('/types', getMissionTypes);
 
 // Mount sub-routers for different mission types
 router.use('/type-url', typeUrlRouter);
