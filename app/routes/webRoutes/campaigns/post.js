@@ -77,16 +77,13 @@ const crypto = require('crypto');
  *         $ref: '#/components/responses/InternalServerError'
  */
 
-// Helper to generate a random numeric code in XXX-XXX format
+// Helper to generate a random 6-digit numeric code
 const generateActivationCode = () => {
     // Generate a random number between 0 and 999,999
     const randomNumber = crypto.randomInt(0, 1000000);
     
     // Pad with leading zeros to ensure it's 6 digits long
-    const sixDigitCode = String(randomNumber).padStart(6, '0');
-    
-    // Format as XXX-XXX
-    return `${sixDigitCode.substring(0, 3)}-${sixDigitCode.substring(3, 6)}`;
+    return String(randomNumber).padStart(6, '0');
 };
 
 const createCampaign = async (req, res, next) => {
