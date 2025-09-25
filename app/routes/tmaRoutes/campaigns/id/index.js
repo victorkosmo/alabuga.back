@@ -4,7 +4,7 @@ const router = express.Router({ mergeParams: true });
 const { authenticateTmaJWT } = require('@middleware/authenticateTmaJWT');
 
 const getCampaignById = require('./get');
-const missionsRouter = require('./missions');
+const missionsRouter = require('../missions');
 
 // This route corresponds to GET /telegram/campaigns/:campaignId
 router.get('/', authenticateTmaJWT, getCampaignById);
