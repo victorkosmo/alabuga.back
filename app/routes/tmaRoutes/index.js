@@ -5,9 +5,11 @@ const router = express.Router();
 const authRouter = require('./auth/index');
 const usersRouter = require('./users/index');
 const campaignsRouter = require('./campaigns/index');
+const completionsRouter = require('./completions/index');
 
 router.use('/auth', authRouter);
 router.use('/users', usersRouter);
 router.use('/campaigns', campaignsRouter);
+router.use('/completions', completionsRouter);
 
 module.exports = router;
