@@ -1,14 +1,14 @@
-// app/routes/webRoutes/campaigns/list.js
+// app/routes/webRoutes/ranks/list.js
 const pool = require('@db');
 
 /**
  * @swagger
- * /web/campaigns:
+ * /web/ranks:
  *   get:
  *     tags:
- *       - Campaigns
- *     summary: List all campaigns
- *     description: Retrieve a paginated list of all campaigns. Requires authentication.
+ *       - Ranks
+ *     summary: List all ranks
+ *     description: Retrieve a paginated list of all ranks, ordered by their sequence. Requires authentication.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -29,7 +29,7 @@ const pool = require('@db');
  *         description: The number of items per page (max 100).
  *     responses:
  *       200:
- *         description: A paginated list of campaigns.
+ *         description: A paginated list of ranks.
  *         content:
  *           application/json:
  *             schema:
@@ -41,7 +41,7 @@ const pool = require('@db');
  *                 data:
  *                   type: array
  *                   items:
- *                     $ref: '#/components/schemas/Campaign'
+ *                     $ref: '#/components/schemas/Rank'
  *                 meta:
  *                   type: object
  *                   properties:
@@ -54,7 +54,7 @@ const pool = require('@db');
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-const listCampaigns = async (req, res, next) => {
+const listRanks = async (req, res, next) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
@@ -69,18 +69,12 @@ const listCampaigns = async (req, res, next) => {
         const offset = (page - 1) * limit;
 
         const countPromise = pool.query(
-            'SELECT COUNT(*) FROM campaigns WHERE deleted_at IS NULL'
+            'SELECT COUNT(*) FROM ranks WHERE deleted_at IS NULL'
         );
         const dataPromise = pool.query(
-            `SELECT 
-                c.*,
-                (SELECT COUNT(*) FROM user_campaigns uc WHERE uc.campaign_id = c.id AND uc.is_active = true)::INTEGER AS current_participants
-             FROM 
-                campaigns c
-             WHERE 
-                c.deleted_at IS NULL
-             ORDER BY 
-                c.created_at DESC
+            `SELECT * FROM ranks 
+             WHERE deleted_at IS NULL 
+             ORDER BY sequence_order ASC 
              LIMIT $1 OFFSET $2`,
             [limit, offset]
         );
@@ -107,4 +101,4 @@ const listCampaigns = async (req, res, next) => {
     }
 };
 
-module.exports = listCampaigns;
+module.exports = listRanks;
