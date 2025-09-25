@@ -51,6 +51,11 @@ router.use(authenticateJWT);
  *           nullable: true
  *           description: Maximum number of participants. Null for unlimited.
  *           example: 100
+ *         current_participants:
+ *           type: integer
+ *           description: The number of users who have currently joined the campaign.
+ *           example: 25
+ *           readOnly: true
  *         created_by:
  *           type: string
  *           format: uuid

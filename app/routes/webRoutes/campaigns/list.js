@@ -72,9 +72,15 @@ const listCampaigns = async (req, res, next) => {
             'SELECT COUNT(*) FROM campaigns WHERE deleted_at IS NULL'
         );
         const dataPromise = pool.query(
-            `SELECT * FROM campaigns 
-             WHERE deleted_at IS NULL 
-             ORDER BY created_at DESC 
+            `SELECT 
+                c.*,
+                (SELECT COUNT(*) FROM user_campaigns uc WHERE uc.campaign_id = c.id AND uc.is_active = true)::INTEGER AS current_participants
+             FROM 
+                campaigns c
+             WHERE 
+                c.deleted_at IS NULL
+             ORDER BY 
+                c.created_at DESC
              LIMIT $1 OFFSET $2`,
             [limit, offset]
         );
