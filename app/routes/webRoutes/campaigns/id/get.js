@@ -36,6 +36,10 @@ const { isUUID } = require('validator');
  *                     - $ref: '#/components/schemas/Campaign'
  *                     - type: object
  *                       properties:
+ *                         current_participants:
+ *                           type: integer
+ *                           description: The number of users who have joined the campaign.
+ *                           example: 25
  *                         missions:
  *                           type: array
  *                           description: A list of missions associated with the campaign, ordered by creation date.
@@ -95,7 +99,16 @@ const getCampaign = async (req, res, next) => {
             [id]
         );
 
-        const [campaignResult, missionsResult] = await Promise.all([campaignPromise, missionsPromise]);
+        const participantsPromise = pool.query(
+            'SELECT COUNT(*)::INTEGER as count FROM user_campaigns WHERE campaign_id = $1 AND is_active = true',
+            [id]
+        );
+
+        const [campaignResult, missionsResult, participantsResult] = await Promise.all([
+            campaignPromise,
+            missionsPromise,
+            participantsPromise
+        ]);
 
         if (campaignResult.rows.length === 0) {
             const err = new Error(`Campaign with ID ${id} not found.`);
@@ -106,6 +119,7 @@ const getCampaign = async (req, res, next) => {
 
         const campaign = campaignResult.rows[0];
         campaign.missions = missionsResult.rows;
+        campaign.current_participants = participantsResult.rows[0].count;
 
         res.locals.data = campaign;
         next();
