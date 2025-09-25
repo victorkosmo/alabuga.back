@@ -76,7 +76,6 @@ const joinCampaign = async (req, res, next) => {
             err.statusCode = 404;
             err.code = 'CAMPAIGN_NOT_FOUND';
             await client.query('ROLLBACK');
-            client.release();
             return next(err);
         }
 
@@ -88,7 +87,6 @@ const joinCampaign = async (req, res, next) => {
             err.statusCode = 400;
             err.code = 'CAMPAIGN_NOT_ACTIVE';
             await client.query('ROLLBACK');
-            client.release();
             return next(err);
         }
 
@@ -98,7 +96,6 @@ const joinCampaign = async (req, res, next) => {
             err.statusCode = 400;
             err.code = 'CAMPAIGN_NOT_STARTED';
             await client.query('ROLLBACK');
-            client.release();
             return next(err);
         }
 
@@ -107,7 +104,6 @@ const joinCampaign = async (req, res, next) => {
             err.statusCode = 400;
             err.code = 'CAMPAIGN_ENDED';
             await client.query('ROLLBACK');
-            client.release();
             return next(err);
         }
 
@@ -120,7 +116,6 @@ const joinCampaign = async (req, res, next) => {
             err.statusCode = 409;
             err.code = 'ALREADY_JOINED';
             await client.query('ROLLBACK');
-            client.release();
             return next(err);
         }
 
@@ -135,7 +130,6 @@ const joinCampaign = async (req, res, next) => {
                 err.statusCode = 400;
                 err.code = 'CAMPAIGN_FULL';
                 await client.query('ROLLBACK');
-                client.release();
                 return next(err);
             }
         }
@@ -159,7 +153,12 @@ const joinCampaign = async (req, res, next) => {
         next();
 
     } catch (err) {
-        await client.query('ROLLBACK');
+        try {
+            await client.query('ROLLBACK');
+        } catch (rollbackErr) {
+            // If rollback fails, log it, but don't shadow the original error
+            console.error('Error during transaction rollback:', rollbackErr);
+        }
         next(err);
     } finally {
         client.release();
