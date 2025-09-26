@@ -36,6 +36,10 @@ const { isUUID } = require('validator');
  *                     - $ref: '#/components/schemas/Mission'
  *                     - type: object
  *                       properties:
+ *                         required_achievement_name:
+ *                           type: string
+ *                           nullable: true
+ *                           description: "The name of the required achievement, if any."
  *                         details:
  *                           type: object
  *                           properties:
@@ -70,11 +74,14 @@ const getUrlMission = async (req, res, next) => {
             SELECT
                 m.*,
                 mmd.submission_prompt,
-                mmd.placeholder_text
+                mmd.placeholder_text,
+                a.name AS required_achievement_name
             FROM
                 missions m
             JOIN
                 mission_manual_details mmd ON m.id = mmd.mission_id
+            LEFT JOIN
+                achievements a ON m.required_achievement_id = a.id
             WHERE
                 m.id = $1 AND m.type = 'MANUAL_URL' AND m.deleted_at IS NULL;
         `;
