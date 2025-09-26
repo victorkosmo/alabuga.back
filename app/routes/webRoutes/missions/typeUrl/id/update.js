@@ -63,6 +63,10 @@ const { isUUID } = require('validator');
  *                     - $ref: '#/components/schemas/Mission'
  *                     - type: object
  *                       properties:
+ *                         required_achievement_name:
+ *                           type: string
+ *                           nullable: true
+ *                           description: "The name of the required achievement, if any."
  *                         details:
  *                           type: object
  *                           properties:
@@ -172,10 +176,22 @@ const updateUrlMission = async (req, res, next) => {
             updatedDetails = result.rows[0];
         }
 
+        let required_achievement_name = null;
+        if (updatedMission.required_achievement_id) {
+            const achievementResult = await client.query(
+                'SELECT name FROM achievements WHERE id = $1',
+                [updatedMission.required_achievement_id]
+            );
+            if (achievementResult.rowCount > 0) {
+                required_achievement_name = achievementResult.rows[0].name;
+            }
+        }
+
         await client.query('COMMIT');
 
         res.locals.data = {
             ...updatedMission,
+            required_achievement_name,
             details: {
                 submission_prompt: updatedDetails.submission_prompt,
                 placeholder_text: updatedDetails.placeholder_text
