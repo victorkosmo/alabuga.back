@@ -60,6 +60,41 @@ router.use(authenticateJWT);
  *       type: string
  *       enum: [MANUAL_URL, QUIZ, QR_CODE]
  *       description: The type of logic used to complete the mission.
+ *     MissionCompletionStatus:
+ *       type: string
+ *       enum: [PENDING_REVIEW, APPROVED, REJECTED]
+ *       description: The status of a mission completion that requires moderation.
+ *     MissionCompletion:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *         user_id:
+ *           type: string
+ *           format: uuid
+ *         mission_id:
+ *           type: string
+ *           format: uuid
+ *         status:
+ *           $ref: '#/components/schemas/MissionCompletionStatus'
+ *         result_data:
+ *           type: string
+ *           nullable: true
+ *           description: Data submitted by the user (e.g., a URL).
+ *         moderator_id:
+ *           type: string
+ *           format: uuid
+ *           nullable: true
+ *         moderator_comment:
+ *           type: string
+ *           nullable: true
+ *         created_at:
+ *           type: string
+ *           format: date-time
+ *         updated_at:
+ *           type: string
+ *           format: date-time
  */
 
 // Route to get supported mission types
