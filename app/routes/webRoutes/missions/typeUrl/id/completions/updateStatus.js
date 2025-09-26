@@ -92,11 +92,63 @@ const updateCompletionStatus = async (req, res, next) => {
         return next(err);
     }
 
-    // TODO: Implement transaction to award points/artifacts when status is 'APPROVED'.
-    // This is a critical step for gamification logic. For now, we just update the status.
-
+    const client = await pool.connect();
     try {
-        const query = `
+        await client.query('BEGIN');
+
+        // Step 1: Fetch the current completion status and user ID to check for idempotency. Lock the row.
+        const completionCheckQuery = `
+            SELECT user_id, status FROM mission_completions WHERE id = $1 AND mission_id = $2 FOR UPDATE;
+        `;
+        const completionCheckResult = await client.query(completionCheckQuery, [completionId, missionId]);
+
+        if (completionCheckResult.rowCount === 0) {
+            const err = new Error(`Completion with ID ${completionId} for mission ${missionId} not found.`);
+            err.statusCode = 404;
+            err.code = 'NOT_FOUND';
+            throw err; // This will be caught and rolled back
+        }
+
+        const { user_id: userId, status: currentStatus } = completionCheckResult.rows[0];
+
+        // Idempotency check: If already approved and we're trying to approve again, do nothing further.
+        if (currentStatus === 'APPROVED' && status === 'APPROVED') {
+            await client.query('ROLLBACK'); // No changes needed.
+            const finalState = await pool.query('SELECT * FROM mission_completions WHERE id = $1', [completionId]);
+            res.locals.data = finalState.rows[0];
+            res.locals.message = 'Mission completion was already approved.';
+            return next();
+        }
+
+        // Step 2: If approving for the first time, fetch mission rewards and update user points.
+        if (status === 'APPROVED' && currentStatus !== 'APPROVED') {
+            const missionQuery = 'SELECT experience_reward, mana_reward FROM missions WHERE id = $1;';
+            const missionResult = await client.query(missionQuery, [missionId]);
+            
+            if (missionResult.rowCount === 0) {
+                const err = new Error(`Mission with ID ${missionId} not found.`);
+                err.statusCode = 404;
+                err.code = 'NOT_FOUND';
+                throw err;
+            }
+            
+            const { experience_reward, mana_reward } = missionResult.rows[0];
+
+            if (experience_reward > 0 || mana_reward > 0) {
+                const updateUserQuery = `
+                    UPDATE users
+                    SET
+                        experience_points = experience_points + $1,
+                        mana_points = mana_points + $2,
+                        updated_at = NOW()
+                    WHERE id = $3;
+                `;
+                await client.query(updateUserQuery, [experience_reward, mana_reward, userId]);
+            }
+        }
+
+        // Step 3: Update the completion status itself.
+        const updateCompletionQuery = `
             UPDATE mission_completions
             SET
                 status = $1,
@@ -104,25 +156,24 @@ const updateCompletionStatus = async (req, res, next) => {
                 moderator_comment = $3,
                 updated_at = NOW()
             WHERE
-                id = $4 AND mission_id = $5
+                id = $4
             RETURNING *;
         `;
+        // Clear comment if not rejecting
+        const finalComment = status === 'REJECTED' ? moderator_comment : null;
+        const updateResult = await client.query(updateCompletionQuery, [status, moderatorId, finalComment, completionId]);
 
-        const { rows, rowCount } = await pool.query(query, [status, moderatorId, moderator_comment, completionId, missionId]);
+        await client.query('COMMIT');
 
-        if (rowCount === 0) {
-            const err = new Error(`Completion with ID ${completionId} for mission ${missionId} not found.`);
-            err.statusCode = 404;
-            err.code = 'NOT_FOUND';
-            return next(err);
-        }
-
-        res.locals.data = rows[0];
+        res.locals.data = updateResult.rows[0];
         res.locals.message = 'Mission completion status updated successfully.';
         next();
 
     } catch (err) {
+        await client.query('ROLLBACK');
         next(err);
+    } finally {
+        client.release();
     }
 };
 
