@@ -286,13 +286,22 @@ Table "user_artifacts" {
   }
 }
 
-// Achievements that users can earn
+// Achievements that users can earn by meeting specific conditions
 Table "achievements" {
   "id" uuid [pk, not null, default: `gen_random_uuid()`]
   "campaign_id" uuid [ref: > campaigns.id, not null, note: 'Campaign this achievement belongs to']
-  "name" varchar(255) [not null, note: 'Display name of the achievement (e.g., Блогер, Знаток завода)']
+  "name" varchar(255) [not null, note: 'Display name of the achievement (e.g., "Marketer", "Top Recruiter")']
   "description" text [null, note: 'Detailed description of the achievement']
   "image_url" text [null, note: 'URL to the achievement badge image']
+  
+  // --- Unlock Logic ---
+  "unlock_conditions" jsonb [not null, default: '{}', note: 'JSON object with conditions to earn this achievement. E.g., {"required_missions": ["uuid1", "uuid2"] }']
+  
+  // --- Achievement Rewards ---
+  "experience_reward" integer [not null, default: 0, note: 'Experience points awarded when this achievement is earned.']
+  "mana_reward" integer [not null, default: 0, note: 'Mana points awarded when this achievement is earned.']
+  "awarded_artifact_id" uuid [ref: > artifacts.id, null, note: 'An optional artifact awarded when this achievement is earned.']
+
   "created_at" timestamp [not null, default: `now()`, note: 'When the achievement was created']
 
   Indexes {
