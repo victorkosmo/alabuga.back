@@ -112,6 +112,7 @@ const attachToMission = async (req, res, next) => {
 
         await client.query('COMMIT');
 
+        res.locals.data = {};
         res.locals.message = 'Achievement attached to mission successfully.';
         next();
 

@@ -79,6 +79,7 @@ const detachFromMission = async (req, res, next) => {
             return next(err);
         }
 
+        res.locals.data = {};
         res.locals.message = 'Achievement detached from mission successfully.';
         next();
 
