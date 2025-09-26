@@ -53,10 +53,12 @@ router.use(authenticateJWT);
  */
 
 const listAchievements = require('./list');
+const listMinimalAchievements = require('./listMinimal');
 const createAchievement = require('./post');
 const idRouter = require('./id');
 
 router.get('/', listAchievements);
+router.get('/list-minimal', listMinimalAchievements);
 router.post('/', createAchievement);
 
 // Mount the dedicated sub-router for all /:id paths.
