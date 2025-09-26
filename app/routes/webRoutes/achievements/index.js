@@ -47,6 +47,12 @@ router.use(authenticateJWT);
  *         - created_at
  */
 
+const listAchievements = require('./list');
+const createAchievement = require('./post');
+
+router.get('/', listAchievements);
+router.post('/', createAchievement);
+
 // Routes for individual achievements (e.g., GET /:id, PUT /:id) can be added here later.
 
 module.exports = router;

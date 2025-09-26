@@ -6,12 +6,10 @@ const router = express.Router({ mergeParams: true });
 const getCampaign = require('./get');
 const updateCampaign = require('./update');
 const deleteCampaign = require('./delete');
-const achievementsRouter = require('./achievements');
 
 // Define routes for /campaigns/:id
 router.get('/', getCampaign);
 router.put('/', updateCampaign);
 router.delete('/', deleteCampaign);
-router.use('/achievements', achievementsRouter);
 
 module.exports = router;
