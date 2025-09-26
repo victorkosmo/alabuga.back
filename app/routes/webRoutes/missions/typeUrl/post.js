@@ -22,7 +22,6 @@ const { isUUID } = require('validator');
  *               - campaign_id
  *               - title
  *               - category
- *               - required_rank_id
  *               - submission_prompt
  *             properties:
  *               campaign_id:
@@ -39,10 +38,11 @@ const { isUUID } = require('validator');
  *               category:
  *                 type: string
  *                 example: "Portfolio"
- *               required_rank_id:
+ *               required_achievement_id:
  *                 type: string
  *                 format: uuid
- *                 description: The minimum rank required to access this mission.
+ *                 nullable: true
+ *                 description: Optional achievement that must be earned before this mission becomes available.
  *               experience_reward:
  *                 type: integer
  *                 default: 0
@@ -96,7 +96,7 @@ const createUrlMission = async (req, res, next) => {
         title,
         description,
         category,
-        required_rank_id,
+        required_achievement_id,
         experience_reward = 0,
         mana_reward = 0,
         submission_prompt,
@@ -105,14 +105,14 @@ const createUrlMission = async (req, res, next) => {
     const created_by = req.user.userId;
 
     // Basic validation
-    if (!title || !category || !submission_prompt || !campaign_id || !required_rank_id) {
-        const err = new Error('Missing required fields: campaign_id, title, category, required_rank_id, submission_prompt.');
+    if (!title || !category || !submission_prompt || !campaign_id) {
+        const err = new Error('Missing required fields: campaign_id, title, category, submission_prompt.');
         err.statusCode = 400;
         err.code = 'VALIDATION_ERROR';
         return next(err);
     }
-    if (!isUUID(campaign_id) || !isUUID(required_rank_id)) {
-        const err = new Error('Invalid UUID format for campaign_id or required_rank_id.');
+    if (!isUUID(campaign_id) || (required_achievement_id && !isUUID(required_achievement_id))) {
+        const err = new Error('Invalid UUID format for campaign_id or required_achievement_id.');
         err.statusCode = 400;
         err.code = 'INVALID_ID';
         return next(err);
@@ -122,16 +122,27 @@ const createUrlMission = async (req, res, next) => {
     try {
         await client.query('BEGIN');
 
+        const rankQuery = 'SELECT id FROM ranks WHERE deleted_at IS NULL ORDER BY sequence_order ASC LIMIT 1';
+        const rankResult = await client.query(rankQuery);
+
+        if (rankResult.rowCount === 0) {
+            const err = new Error('No ranks found in the system. Cannot create a mission.');
+            err.statusCode = 400;
+            err.code = 'NO_RANKS_FOUND';
+            throw err;
+        }
+        const defaultRankId = rankResult.rows[0].id;
+
         const missionQuery = `
             INSERT INTO missions (
                 campaign_id, title, description, category, required_rank_id, 
-                experience_reward, mana_reward, type, created_by
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'MANUAL_URL', $8)
+                required_achievement_id, experience_reward, mana_reward, type, created_by
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'MANUAL_URL', $9)
             RETURNING *;
         `;
         const missionParams = [
-            campaign_id, title, description, category, required_rank_id,
-            experience_reward, mana_reward, created_by
+            campaign_id, title, description, category, defaultRankId,
+            required_achievement_id, experience_reward, mana_reward, created_by
         ];
         const missionResult = await client.query(missionQuery, missionParams);
         const newMission = missionResult.rows[0];

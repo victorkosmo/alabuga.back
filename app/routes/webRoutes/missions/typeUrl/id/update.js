@@ -34,9 +34,10 @@ const { isUUID } = require('validator');
  *                 nullable: true
  *               category:
  *                 type: string
- *               required_rank_id:
+ *               required_achievement_id:
  *                 type: string
  *                 format: uuid
+ *                 nullable: true
  *               experience_reward:
  *                 type: integer
  *               mana_reward:
@@ -92,7 +93,14 @@ const updateUrlMission = async (req, res, next) => {
         return next(err);
     }
 
-    const missionFields = ['title', 'description', 'category', 'required_rank_id', 'experience_reward', 'mana_reward'];
+    if (body.required_achievement_id !== undefined && body.required_achievement_id !== null && !isUUID(body.required_achievement_id)) {
+        const err = new Error('Invalid UUID format for required_achievement_id.');
+        err.statusCode = 400;
+        err.code = 'INVALID_ID';
+        return next(err);
+    }
+
+    const missionFields = ['title', 'description', 'category', 'required_achievement_id', 'experience_reward', 'mana_reward'];
     const detailFields = ['submission_prompt', 'placeholder_text'];
 
     const missionUpdates = {};

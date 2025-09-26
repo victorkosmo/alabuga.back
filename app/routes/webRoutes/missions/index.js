@@ -34,6 +34,11 @@ router.use(authenticateJWT);
  *         required_rank_id:
  *           type: string
  *           format: uuid
+ *         required_achievement_id:
+ *           type: string
+ *           format: uuid
+ *           nullable: true
+ *           description: Optional achievement that must be earned before this mission becomes available.
  *         experience_reward:
  *           type: integer
  *         mana_reward:
