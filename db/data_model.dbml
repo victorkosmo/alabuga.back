@@ -38,6 +38,7 @@ Enum "mission_type" {
   MANUAL_URL // Mission completed by submitting a URL, potentially requiring moderation
   QUIZ // Mission completed by passing a quiz
   QR_CODE // Mission completed by scanning a specific QR code
+  AI_CHECK // Mission completed by AI evaluation of user submission
 }
 
 // Enum for the status of a campaign
@@ -144,7 +145,7 @@ Table "campaigns" {
   "created_by" uuid [ref: > managers.id, not null, note: 'The manager who created this campaign.']
   "metadata" jsonb [null, note: 'Additional campaign-specific settings and configuration data.']
   "created_at" timestamp [not null, default: `now()`, note: 'Timestamp when the campaign was created.']
-  "updated_at" timestamp [not null, default: `now()`, note: 'Timestamp when the campaign was last modified.']
+  "updated_at" timestamp [not null, default: `now()`]
   "deleted_at" timestamp [null, note: 'Timestamp for soft deletion of campaigns.']
 
   Indexes {
@@ -180,7 +181,7 @@ Table "campaign_templates" {
   "created_by" uuid [ref: > managers.id, not null, note: 'The manager who created this template.']
   "is_public" boolean [not null, default: false, note: 'Whether this template can be used by other managers.']
   "created_at" timestamp [not null, default: `now()`, note: 'When the template was created.']
-  "updated_at" timestamp [not null, default: `now()`, note: 'When the template was last modified.']
+  "updated_at" timestamp [not null, default: `now()`]
   "deleted_at" timestamp [null, note: 'Timestamp for soft deletion of templates.']
 
   Indexes {
@@ -232,6 +233,15 @@ Table "mission_manual_details" {
   "placeholder_text" varchar(255) [null, note: 'Placeholder text for the URL input field (e.g., "https://github.com/...").']
 }
 
+// Dedicated table for AI mission check details.
+Table "mission_ai_check_details" {
+  "mission_id" uuid [pk, ref: > missions.id, not null, note: 'Foreign key linking to the specific mission']
+  "prompt_template" text [not null, note: 'AI prompt template for evaluating user submission']
+  "evaluation_criteria" jsonb [not null, note: 'JSON object defining specific criteria for AI evaluation']
+  "confidence_threshold" float [not null, default: 0.8, note: 'Minimum confidence score required for automatic approval (0-1)']
+  "user_instruction" text [not null, note: 'Instructions shown to users for this AI-checked mission']
+}
+
 // Log of users completing missions
 Table "mission_completions" {
   "id" uuid [pk, not null, default: `gen_random_uuid()`]
@@ -275,6 +285,35 @@ Table "user_artifacts" {
   }
 }
 
+// Achievements that users can earn
+Table "achievements" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "campaign_id" uuid [ref: > campaigns.id, not null, note: 'Campaign this achievement belongs to']
+  "name" varchar(255) [not null, note: 'Display name of the achievement (e.g., Блогер, Знаток завода)']
+  "description" text [null, note: 'Detailed description of the achievement']
+  "image_url" text [null, note: 'URL to the achievement badge image']
+  "created_at" timestamp [not null, default: `now()`, note: 'When the achievement was created']
+
+  Indexes {
+    campaign_id
+    (campaign_id, name)
+  }
+}
+
+// Join table for achievements earned by users
+Table "user_achievements" {
+  "user_id" uuid [ref: > users.id, not null, note: 'User who earned the achievement']
+  "achievement_id" uuid [ref: > achievements.id, not null, note: 'Achievement that was earned']
+  "awarded_at" timestamp [not null, default: `now()`, note: 'When the achievement was awarded to the user']
+
+  Indexes {
+    (user_id, achievement_id) [pk, name: 'pk_user_achievements']
+    user_id
+    achievement_id
+    awarded_at
+  }
+}
+
 // Items available for purchase in the store (Хранилище)
 Table "store_items" {
   "id" uuid [pk, not null, default: `gen_random_uuid()`]
@@ -284,11 +323,19 @@ Table "store_items" {
   "cost" integer [not null, note: 'Price in mana_points.']
   "quantity" integer [null, note: 'Available stock. NULL for infinite items (e.g., digital goods).']
   "is_active" boolean [not null, default: true, note: 'Toggles visibility in the store.']
+  "campaign_id" uuid [ref: > campaigns.id, null, note: 'Campaign this store item belongs to. NULL for global items']
+  "is_global" boolean [not null, default: false, note: 'Whether this item is available across all campaigns']
   
   // --- Timestamps ---
   "created_at" timestamp [not null, default: `now()`]
   "updated_at" timestamp [not null, default: `now()`]
   "deleted_at" timestamp [null]
+
+  Indexes {
+    campaign_id
+    is_global
+    (campaign_id, is_active)
+  }
 }
 
 // Log of user purchases from the store
