@@ -198,6 +198,7 @@ Table "missions" {
   "description" text [null]
   "category" varchar(100) [not null, note: 'Category for mission branching, e.g., "Квесты", "Рекрутинг".']
   "required_rank_id" uuid [ref: > ranks.id, not null, note: 'The minimum rank required to access this mission.']
+  "required_achievement_id" uuid [ref: > achievements.id, null, note: 'Optional achievement that must be earned before this mission becomes available. Must be from the same campaign.']
   
   // --- Rewards & Effects ---
   "experience_reward" integer [not null, default: 0]
