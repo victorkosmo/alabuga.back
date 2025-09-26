@@ -40,19 +40,26 @@ router.use(authenticateJWT);
  *           type: string
  *           format: date-time
  *           description: The timestamp when the achievement was created.
+ *         updated_at:
+ *           type: string
+ *           format: date-time
+ *           description: The timestamp when the achievement was last updated.
  *       required:
  *         - id
  *         - campaign_id
  *         - name
  *         - created_at
+ *         - updated_at
  */
 
 const listAchievements = require('./list');
 const createAchievement = require('./post');
+const idRouter = require('./id');
 
 router.get('/', listAchievements);
 router.post('/', createAchievement);
 
-// Routes for individual achievements (e.g., GET /:id, PUT /:id) can be added here later.
+// Mount the dedicated sub-router for all /:id paths.
+router.use('/:id', idRouter);
 
 module.exports = router;
