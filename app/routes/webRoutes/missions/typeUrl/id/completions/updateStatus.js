@@ -1,6 +1,7 @@
 // app/routes/webRoutes/missions/typeUrl/id/completions/updateStatus.js
 const pool = require('@db');
 const { isUUID } = require('validator');
+const { sendTelegramMessage } = require('@features/sendTelegramMsg');
 
 /**
  * @swagger
@@ -121,9 +122,10 @@ const updateCompletionStatus = async (req, res, next) => {
             return next();
         }
 
-        // Step 2: If approving for the first time, fetch mission rewards and update user points.
+        // Step 2: If approving for the first time, fetch mission rewards, update user points, and send notification.
         if (status === 'APPROVED' && currentStatus !== 'APPROVED') {
-            const missionQuery = 'SELECT experience_reward, mana_reward FROM missions WHERE id = $1;';
+            // Fetch mission details
+            const missionQuery = 'SELECT title, experience_reward, mana_reward FROM missions WHERE id = $1;';
             const missionResult = await client.query(missionQuery, [missionId]);
             
             if (missionResult.rowCount === 0) {
@@ -133,8 +135,9 @@ const updateCompletionStatus = async (req, res, next) => {
                 throw err;
             }
             
-            const { experience_reward, mana_reward } = missionResult.rows[0];
+            const { title: missionTitle, experience_reward, mana_reward } = missionResult.rows[0];
 
+            // Update user points
             if (experience_reward > 0 || mana_reward > 0) {
                 const updateUserQuery = `
                     UPDATE users
@@ -145,6 +148,21 @@ const updateCompletionStatus = async (req, res, next) => {
                     WHERE id = $3;
                 `;
                 await client.query(updateUserQuery, [experience_reward, mana_reward, userId]);
+            }
+
+            // Fetch user's tg_id for notification
+            const userQuery = 'SELECT tg_id FROM users WHERE id = $1;';
+            const userResult = await client.query(userQuery, [userId]);
+
+            if (userResult.rowCount > 0) {
+                const { tg_id: tgId } = userResult.rows[0];
+                const message = `Поздравляем! Ваше задание «${missionTitle}» было одобрено.\n\nВы получили:\n- ${experience_reward} опыта\n- ${mana_reward} маны`;
+                
+                // Send notification, but don't let it fail the transaction
+                await sendTelegramMessage(tgId, message);
+            } else {
+                // Log if user not found, but don't fail the transaction
+                console.warn(`User with ID ${userId} not found when trying to send completion notification.`);
             }
         }
 
