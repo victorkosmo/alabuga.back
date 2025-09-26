@@ -68,7 +68,7 @@ const attachToMission = async (req, res, next) => {
 
         await client.query('BEGIN');
 
-        const achievementQuery = 'SELECT campaign_id FROM achievements WHERE id = $1 AND deleted_at IS NULL FOR UPDATE';
+        const achievementQuery = 'SELECT campaign_id FROM achievements WHERE id = $1 FOR UPDATE';
         const achievementResult = await client.query(achievementQuery, [achievementId]);
 
         if (achievementResult.rowCount === 0) {

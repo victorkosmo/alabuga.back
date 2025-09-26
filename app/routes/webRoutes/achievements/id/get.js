@@ -51,7 +51,7 @@ const getAchievement = async (req, res, next) => {
         }
 
         const { rows } = await pool.query(
-            'SELECT * FROM achievements WHERE id = $1 AND deleted_at IS NULL',
+            'SELECT * FROM achievements WHERE id = $1',
             [id]
         );
 

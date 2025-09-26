@@ -92,12 +92,12 @@ const listAchievements = async (req, res, next) => {
         }
 
         const countPromise = pool.query(
-            'SELECT COUNT(*) FROM achievements WHERE campaign_id = $1 AND deleted_at IS NULL',
+            'SELECT COUNT(*) FROM achievements WHERE campaign_id = $1',
             [campaignId]
         );
         const dataPromise = pool.query(
             `SELECT * FROM achievements
-             WHERE campaign_id = $1 AND deleted_at IS NULL
+             WHERE campaign_id = $1
              ORDER BY created_at DESC
              LIMIT $2 OFFSET $3`,
             [campaignId, limit, offset]

@@ -99,7 +99,7 @@ const updateAchievement = async (req, res, next) => {
         updateFields.push(`updated_at = NOW()`);
         queryParams.push(id);
 
-        const updateQuery = `UPDATE achievements SET ${updateFields.join(', ')} WHERE id = $${paramIndex} AND deleted_at IS NULL RETURNING *`;
+        const updateQuery = `UPDATE achievements SET ${updateFields.join(', ')} WHERE id = $${paramIndex} RETURNING *`;
 
         const { rows } = await pool.query(updateQuery, queryParams);
 

@@ -66,7 +66,7 @@ const listMinimalAchievements = async (req, res, next) => {
 
         const { rows } = await pool.query(
             `SELECT id, name FROM achievements
-             WHERE campaign_id = $1 AND deleted_at IS NULL
+             WHERE campaign_id = $1
              ORDER BY name ASC`,
             [campaignId]
         );

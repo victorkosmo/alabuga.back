@@ -9,7 +9,7 @@ const { isUUID } = require('validator');
  *     tags:
  *       - Achievements
  *     summary: Delete an achievement by ID
- *     description: Soft-deletes an achievement. It cannot be deleted if it has been awarded to any user.
+ *     description: Deletes an achievement. It cannot be deleted if it has been awarded to any user.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -69,9 +69,7 @@ const deleteAchievement = async (req, res, next) => {
         }
 
         const { rowCount } = await pool.query(
-            `UPDATE achievements 
-             SET deleted_at = NOW() 
-             WHERE id = $1 AND deleted_at IS NULL`,
+            `DELETE FROM achievements WHERE id = $1`,
             [id]
         );
 
