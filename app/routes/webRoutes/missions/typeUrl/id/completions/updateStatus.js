@@ -9,7 +9,8 @@ const { isUUID } = require('validator');
  *     tags:
  *       - Missions Completions
  *     summary: Update the status of a mission completion
- *     description: Updates the status of a specific mission completion (e.g., to approve or reject it). When rejecting, a comment is required. Approving a mission should trigger reward distribution (Note: reward logic is a separate concern to be implemented).
+ *     description: |
+ *       Updates the status of a specific mission completion (e.g., to approve or reject it). When rejecting, a comment is required. Approving a mission should trigger reward distribution (Note: reward logic is a separate concern to be implemented).
  *     security:
  *       - bearerAuth: []
  *     parameters:
