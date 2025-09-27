@@ -2,6 +2,7 @@
 const pool = require('@db');
 const { isUUID } = require('validator');
 const { sendTelegramMessage } = require('@features/sendTelegramMsg');
+const { checkAndAwardAchievements } = require('@features/achievementChecker');
 
 /**
  * @swagger
@@ -149,6 +150,9 @@ const updateCompletionStatus = async (req, res, next) => {
                 `;
                 await client.query(updateUserQuery, [experience_reward, mana_reward, userId]);
             }
+
+            // Check for and award any achievements this completion might unlock
+            await checkAndAwardAchievements(client, userId, missionId);
 
             // Fetch user's tg_id for notification
             const userQuery = 'SELECT tg_id FROM users WHERE id = $1;';
