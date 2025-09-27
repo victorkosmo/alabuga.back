@@ -46,11 +46,57 @@ async function sendTelegramMessage(
   }
 }
 
-// NEW: Function to handle the registration logic by calling your internal API
+// NEW: Function to send a photo with a caption and a TMA button
+async function sendTelegramPhotoWithButton(
+  chatId: string | number,
+  photoUrl: string,
+  caption: string,
+  buttonText: string,
+  buttonTmaUrl: string
+): Promise<any> {
+  try {
+    // This is the JSON structure for an inline button that opens a Web App (TMA)
+    const replyMarkup = {
+      inline_keyboard: [
+        [
+          {
+            text: buttonText,
+            web_app: { url: buttonTmaUrl },
+          },
+        ],
+      ],
+    };
+
+    const response = await fetch(
+      `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          photo: photoUrl,
+          caption: caption,
+          reply_markup: replyMarkup, // Attach the button here
+        }),
+      }
+    );
+
+    const data = await response.json();
+    if (!data.ok) {
+      throw new Error(`Telegram API error (sendPhoto): ${data.description}`);
+    }
+    return data;
+  } catch (error) {
+    console.error("Error sending Telegram photo with button:", error);
+    throw error;
+  }
+}
+
+// MODIFIED: This function now expects the new API response and returns a structured object
 async function registerUserForCampaign(
   tgUser: any,
   activationCode: string
-): Promise<string> {
+): Promise<{ success: boolean; message: string; data?: any }> { // Return type is now an object
   try {
     const response = await fetch(`${API_URL}/api/bot/join-campaign`, {
       method: "POST",
@@ -72,15 +118,24 @@ async function registerUserForCampaign(
     const data = await response.json();
 
     if (!response.ok) {
-      // Return the error message from your API if available, otherwise a generic one
-      return data.message || `Could not join the campaign. Server responded with status ${response.status}.`;
+      return {
+        success: false,
+        message: data.message || `Could not join. Status: ${response.status}.`,
+      };
     }
 
-    // Return the success message from your API
-    return data.message;
+    // On success, return the full payload from the API
+    return {
+      success: true,
+      message: data.message,
+      data: data.data, // This contains the URLs
+    };
   } catch (error) {
     console.error("Error registering user for campaign:", error);
-    return "An error occurred while trying to join the campaign. Please try again later.";
+    return {
+      success: false,
+      message: "An error occurred while trying to join the campaign. Please try again later.",
+    };
   }
 }
 
@@ -93,8 +148,6 @@ async function handleBotUpdate(update: any): Promise<void> {
   const text = message.text.trim();
   const user = message.from;
 
-  let responseText = "Unknown command. Type /help for a list of commands.";
-
   // Handle /start command with or without a payload
   if (text.startsWith("/start")) {
     const parts = text.split(" ");
@@ -105,15 +158,42 @@ async function handleBotUpdate(update: any): Promise<void> {
       
       console.log(`Attempting campaign registration for user ${user.id} with code: ${activationCode}`);
 
-      // Call the registration logic and wait for the response message
-      responseText = await registerUserForCampaign(user, activationCode);
+      // Call the registration logic
+      const result = await registerUserForCampaign(user, activationCode);
 
-    } else {
-      // This is a generic /start command
-      responseText = `Hello ${
-        user.first_name || "there"
-      }! 👋\n\nI'm your Telegram bot. How can I help you today?`;
+      try {
+        if (result.success && result.data?.campaign_cover_url && result.data?.campaign_tma_url) {
+          // SUCCESS: Send the rich message with photo and button
+          await sendTelegramPhotoWithButton(
+            chatId,
+            result.data.campaign_cover_url,
+            result.message,
+            "🚀 Open Campaign",
+            result.data.campaign_tma_url
+          );
+        } else {
+          // FAILURE or missing data: Send a simple text message with the error/message
+          await sendTelegramMessage(chatId, result.message);
+        }
+        console.log(
+          `Bot responded to ${
+            message.from.username || message.from.first_name
+          }: ${text}`
+        );
+      } catch (error) {
+        console.error("Failed to send bot response for campaign join:", error);
+      }
+      return; // We've handled the response, so we exit.
     }
+  }
+
+  // For all other commands, we prepare a text response and send it at the end.
+  let responseText = "Unknown command. Type /help for a list of commands.";
+
+  if (text === "/start") { // This will only match plain "/start" now
+    responseText = `Hello ${
+      user.first_name || "there"
+    }! 👋\n\nI'm your Telegram bot. How can I help you today?`;
   } else if (text === "/help") {
     responseText =
       "Available commands:\n/start - Start the bot\n/help - Show this help message\n/ping - Check server connection";
