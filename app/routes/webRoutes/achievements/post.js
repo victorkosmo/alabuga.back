@@ -36,6 +36,22 @@ const { isUUID } = require('validator');
  *                 format: uri
  *                 nullable: true
  *                 description: URL for the achievement's badge image.
+ *               mana_reward:
+ *                 type: integer
+ *                 description: Mana points awarded upon completion. Defaults to 0.
+ *                 example: 100
+ *               unlock_conditions:
+ *                 type: object
+ *                 description: Conditions to unlock the achievement.
+ *                 properties:
+ *                   required_missions:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *                       format: uuid
+ *                     description: An array of mission UUIDs that must be completed.
+ *                 example:
+ *                   required_missions: ["d290f1ee-6c54-4b01-90e6-d701748f0851"]
  *     responses:
  *       201:
  *         description: Achievement created successfully.
@@ -61,7 +77,7 @@ const { isUUID } = require('validator');
  */
 const createAchievement = async (req, res, next) => {
     try {
-        const { campaign_id: campaignId, name, description, image_url } = req.body;
+        const { campaign_id: campaignId, name, description, image_url, mana_reward = 0, unlock_conditions = {} } = req.body;
 
         if (!campaignId || !isUUID(campaignId)) {
             const err = new Error('A valid campaign_id is required in the request body.');
@@ -77,6 +93,27 @@ const createAchievement = async (req, res, next) => {
             return next(err);
         }
 
+        if (typeof mana_reward !== 'number' || !Number.isInteger(mana_reward) || mana_reward < 0) {
+            const err = new Error('mana_reward must be a non-negative integer.');
+            err.statusCode = 400;
+            err.code = 'VALIDATION_ERROR';
+            return next(err);
+        }
+
+        if (typeof unlock_conditions !== 'object' || unlock_conditions === null || Array.isArray(unlock_conditions)) {
+            const err = new Error('unlock_conditions must be an object.');
+            err.statusCode = 400;
+            err.code = 'VALIDATION_ERROR';
+            return next(err);
+        }
+
+        if (unlock_conditions.required_missions && (!Array.isArray(unlock_conditions.required_missions) || !unlock_conditions.required_missions.every(id => isUUID(id)))) {
+            const err = new Error('unlock_conditions.required_missions must be an array of valid UUIDs.');
+            err.statusCode = 400;
+            err.code = 'VALIDATION_ERROR';
+            return next(err);
+        }
+
         const campaignCheck = await pool.query('SELECT 1 FROM campaigns WHERE id = $1 AND deleted_at IS NULL', [campaignId]);
         if (campaignCheck.rowCount === 0) {
             const err = new Error(`Campaign with ID ${campaignId} not found.`);
@@ -86,10 +123,10 @@ const createAchievement = async (req, res, next) => {
         }
 
         const { rows } = await pool.query(
-            `INSERT INTO achievements (campaign_id, name, description, image_url)
-             VALUES ($1, $2, $3, $4)
+            `INSERT INTO achievements (campaign_id, name, description, image_url, mana_reward, unlock_conditions)
+             VALUES ($1, $2, $3, $4, $5, $6)
              RETURNING *`,
-            [campaignId, name.trim(), description, image_url]
+            [campaignId, name.trim(), description, image_url, mana_reward, JSON.stringify(unlock_conditions)]
         );
 
         res.locals.data = rows[0];

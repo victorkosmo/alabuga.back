@@ -36,6 +36,14 @@ router.use(authenticateJWT);
  *           format: uri
  *           nullable: true
  *           description: URL to the achievement badge image.
+ *         mana_reward:
+ *           type: integer
+ *           description: Mana points awarded when this achievement is earned.
+ *           default: 0
+ *         unlock_conditions:
+ *           type: object
+ *           description: 'JSON object with conditions to earn this achievement. E.g., {"required_missions": ["uuid1", "uuid2"] }'
+ *           default: {}
  *         created_at:
  *           type: string
  *           format: date-time
@@ -50,6 +58,8 @@ router.use(authenticateJWT);
  *         - name
  *         - created_at
  *         - updated_at
+ *         - mana_reward
+ *         - unlock_conditions
  */
 
 const listAchievements = require('./list');
