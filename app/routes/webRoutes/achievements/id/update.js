@@ -141,7 +141,9 @@ const updateAchievement = async (req, res, next) => {
             return next(err);
         }
 
-        updateFields.push(`updated_at = NOW()`);
+        // The 'updated_at' column does not exist in the 'achievements' table based on the DBML schema.
+        // Removing the attempt to update it.
+        // updateFields.push(`updated_at = NOW()`); 
         queryParams.push(id);
 
         const updateQuery = `UPDATE achievements SET ${updateFields.join(', ')} WHERE id = $${paramIndex} RETURNING *`;

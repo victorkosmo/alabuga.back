@@ -48,16 +48,11 @@ router.use(authenticateJWT);
  *           type: string
  *           format: date-time
  *           description: The timestamp when the achievement was created.
- *         updated_at:
- *           type: string
- *           format: date-time
- *           description: The timestamp when the achievement was last updated.
  *       required:
  *         - id
  *         - campaign_id
  *         - name
  *         - created_at
- *         - updated_at
  *         - mana_reward
  *         - unlock_conditions
  */
