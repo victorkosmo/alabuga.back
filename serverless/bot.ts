@@ -46,20 +46,74 @@ async function sendTelegramMessage(
   }
 }
 
-// Handle Telegram bot commands
+// NEW: Function to handle the registration logic by calling your internal API
+async function registerUserForCampaign(
+  tgUser: any,
+  activationCode: string
+): Promise<string> {
+  try {
+    const response = await fetch(`${API_URL}/api/bot/join-campaign`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": API_KEY!, // Use your internal API key for security
+      },
+      body: JSON.stringify({
+        tg_user: {
+          id: tgUser.id,
+          username: tgUser.username,
+          first_name: tgUser.first_name,
+          last_name: tgUser.last_name,
+        },
+        activation_code: activationCode,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      // Return the error message from your API if available, otherwise a generic one
+      return data.message || `Could not join the campaign. Server responded with status ${response.status}.`;
+    }
+
+    // Return the success message from your API
+    return data.message;
+  } catch (error) {
+    console.error("Error registering user for campaign:", error);
+    return "An error occurred while trying to join the campaign. Please try again later.";
+  }
+}
+
+// MODIFIED: Handle Telegram bot commands, now with deep link logic
 async function handleBotUpdate(update: any): Promise<void> {
   const message = update.message;
   if (!message?.text) return;
 
   const chatId = message.chat.id;
   const text = message.text.trim();
+  const user = message.from;
 
-  let responseText = "Unknown command";
+  let responseText = "Unknown command. Type /help for a list of commands.";
 
-  if (text === "/start") {
-    responseText = `Hello ${
-      message.from.first_name || "there"
-    }! 👋\n\nI'm your Telegram bot. How can I help you today?`;
+  // Handle /start command with or without a payload
+  if (text.startsWith("/start")) {
+    const parts = text.split(" ");
+    if (parts.length > 1 && parts[1].startsWith("join_")) {
+      // This is a deep link for a campaign!
+      const payload = parts[1];
+      const activationCode = payload.substring("join_".length); // Extracts the code
+      
+      console.log(`Attempting campaign registration for user ${user.id} with code: ${activationCode}`);
+
+      // Call the registration logic and wait for the response message
+      responseText = await registerUserForCampaign(user, activationCode);
+
+    } else {
+      // This is a generic /start command
+      responseText = `Hello ${
+        user.first_name || "there"
+      }! 👋\n\nI'm your Telegram bot. How can I help you today?`;
+    }
   } else if (text === "/help") {
     responseText =
       "Available commands:\n/start - Start the bot\n/help - Show this help message\n/ping - Check server connection";
