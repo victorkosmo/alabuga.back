@@ -64,14 +64,12 @@ router.use(authenticateJWT);
 
 const listAchievements = require('./list');
 const createAchievement = require('./post');
-const uiRouter = require('./ui');
 const idRouter = require('./id');
 
 router.get('/', listAchievements);
 router.post('/', createAchievement);
 
 // Mount sub-routers
-router.use('/ui', uiRouter);
 router.use('/:id', idRouter);
 
 module.exports = router;
