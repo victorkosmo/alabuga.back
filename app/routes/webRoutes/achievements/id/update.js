@@ -37,6 +37,23 @@ const { isUUID } = require('validator');
  *                 type: string
  *                 format: uri
  *                 nullable: true
+ *               mana_reward:
+ *                 type: integer
+ *                 description: Mana points awarded upon completion.
+ *                 example: 150
+ *               unlock_conditions:
+ *                 type: object
+ *                 nullable: true
+ *                 description: Conditions to unlock the achievement. Set to null to clear.
+ *                 properties:
+ *                   required_missions:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *                       format: uuid
+ *                     description: An array of mission UUIDs that must be completed.
+ *                 example:
+ *                   required_missions: ["d290f1ee-6c54-4b01-90e6-d701748f0851"]
  *     responses:
  *       200:
  *         description: Achievement updated successfully.
@@ -63,7 +80,7 @@ const { isUUID } = require('validator');
 const updateAchievement = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { name, description, image_url } = req.body;
+        const { name, description, image_url, mana_reward, unlock_conditions } = req.body;
 
         if (!isUUID(id)) {
             const err = new Error('Invalid ID format');
@@ -89,6 +106,34 @@ const updateAchievement = async (req, res, next) => {
             queryParams.push(image_url);
         }
 
+        if (mana_reward !== undefined) {
+            if (typeof mana_reward !== 'number' || !Number.isInteger(mana_reward) || mana_reward < 0) {
+                const err = new Error('mana_reward must be a non-negative integer.');
+                err.statusCode = 400;
+                err.code = 'VALIDATION_ERROR';
+                return next(err);
+            }
+            updateFields.push(`mana_reward = $${paramIndex++}`);
+            queryParams.push(mana_reward);
+        }
+
+        if (unlock_conditions !== undefined) {
+            if (unlock_conditions !== null && (typeof unlock_conditions !== 'object' || Array.isArray(unlock_conditions))) {
+                const err = new Error('unlock_conditions must be an object or null.');
+                err.statusCode = 400;
+                err.code = 'VALIDATION_ERROR';
+                return next(err);
+            }
+            if (unlock_conditions && unlock_conditions.required_missions && (!Array.isArray(unlock_conditions.required_missions) || !unlock_conditions.required_missions.every(mId => isUUID(mId)))) {
+                const err = new Error('unlock_conditions.required_missions must be an array of valid UUIDs.');
+                err.statusCode = 400;
+                err.code = 'VALIDATION_ERROR';
+                return next(err);
+            }
+            updateFields.push(`unlock_conditions = $${paramIndex++}`);
+            queryParams.push(JSON.stringify(unlock_conditions));
+        }
+
         if (updateFields.length === 0) {
             const err = new Error('At least one field to update must be provided.');
             err.statusCode = 400;
@@ -96,7 +141,9 @@ const updateAchievement = async (req, res, next) => {
             return next(err);
         }
 
-        updateFields.push(`updated_at = NOW()`);
+        // The 'updated_at' column does not exist in the 'achievements' table based on the DBML schema.
+        // Removing the attempt to update it.
+        // updateFields.push(`updated_at = NOW()`); 
         queryParams.push(id);
 
         const updateQuery = `UPDATE achievements SET ${updateFields.join(', ')} WHERE id = $${paramIndex} RETURNING *`;

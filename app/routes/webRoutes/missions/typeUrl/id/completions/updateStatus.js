@@ -2,6 +2,7 @@
 const pool = require('@db');
 const { isUUID } = require('validator');
 const { sendTelegramMessage } = require('@features/sendTelegramMsg');
+const { checkAndAwardAchievements } = require('@features/achievementChecker');
 
 /**
  * @swagger
@@ -122,7 +123,23 @@ const updateCompletionStatus = async (req, res, next) => {
             return next();
         }
 
-        // Step 2: If approving for the first time, fetch mission rewards, update user points, and send notification.
+        // Step 2: Update the completion status itself.
+        const updateCompletionQuery = `
+            UPDATE mission_completions
+            SET
+                status = $1,
+                moderator_id = $2,
+                moderator_comment = $3,
+                updated_at = NOW()
+            WHERE
+                id = $4
+            RETURNING *;
+        `;
+        // Clear comment if not rejecting
+        const finalComment = status === 'REJECTED' ? moderator_comment : null;
+        const updateResult = await client.query(updateCompletionQuery, [status, moderatorId, finalComment, completionId]);
+
+        // Step 3: If approving for the first time, fetch mission rewards, update user points, and send notification.
         if (status === 'APPROVED' && currentStatus !== 'APPROVED') {
             // Fetch mission details
             const missionQuery = 'SELECT title, experience_reward, mana_reward FROM missions WHERE id = $1;';
@@ -150,6 +167,9 @@ const updateCompletionStatus = async (req, res, next) => {
                 await client.query(updateUserQuery, [experience_reward, mana_reward, userId]);
             }
 
+            // Check for and award any achievements this completion might unlock
+            await checkAndAwardAchievements(client, userId, missionId);
+
             // Fetch user's tg_id for notification
             const userQuery = 'SELECT tg_id FROM users WHERE id = $1;';
             const userResult = await client.query(userQuery, [userId]);
@@ -165,22 +185,6 @@ const updateCompletionStatus = async (req, res, next) => {
                 console.warn(`User with ID ${userId} not found when trying to send completion notification.`);
             }
         }
-
-        // Step 3: Update the completion status itself.
-        const updateCompletionQuery = `
-            UPDATE mission_completions
-            SET
-                status = $1,
-                moderator_id = $2,
-                moderator_comment = $3,
-                updated_at = NOW()
-            WHERE
-                id = $4
-            RETURNING *;
-        `;
-        // Clear comment if not rejecting
-        const finalComment = status === 'REJECTED' ? moderator_comment : null;
-        const updateResult = await client.query(updateCompletionQuery, [status, moderatorId, finalComment, completionId]);
 
         await client.query('COMMIT');
 

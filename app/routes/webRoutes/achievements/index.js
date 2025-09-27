@@ -36,32 +36,35 @@ router.use(authenticateJWT);
  *           format: uri
  *           nullable: true
  *           description: URL to the achievement badge image.
+ *         mana_reward:
+ *           type: integer
+ *           description: Mana points awarded when this achievement is earned.
+ *           default: 0
+ *         unlock_conditions:
+ *           type: object
+ *           description: 'JSON object with conditions to earn this achievement. E.g., {"required_missions": ["uuid1", "uuid2"] }'
+ *           default: {}
  *         created_at:
  *           type: string
  *           format: date-time
  *           description: The timestamp when the achievement was created.
- *         updated_at:
- *           type: string
- *           format: date-time
- *           description: The timestamp when the achievement was last updated.
  *       required:
  *         - id
  *         - campaign_id
  *         - name
  *         - created_at
- *         - updated_at
+ *         - mana_reward
+ *         - unlock_conditions
  */
 
 const listAchievements = require('./list');
 const createAchievement = require('./post');
-const uiRouter = require('./ui');
 const idRouter = require('./id');
 
 router.get('/', listAchievements);
 router.post('/', createAchievement);
 
 // Mount sub-routers
-router.use('/ui', uiRouter);
 router.use('/:id', idRouter);
 
 module.exports = router;

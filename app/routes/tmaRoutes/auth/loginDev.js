@@ -1,8 +1,6 @@
 const pool = require('@db');
 const { generateAccessToken, generateRefreshToken } = require('@services/tgAuthService');
 
-// The hardcoded Telegram ID for the developer user.
-const DEV_USER_TG_ID = 99988877766;
 
 /**
  * @swagger
@@ -44,15 +42,24 @@ const DEV_USER_TG_ID = 99988877766;
  *         $ref: '#/components/responses/InternalServerError'
  */
 const tmaDevLogin = async (req, res, next) => {
+    const devUserTgId = process.env.DEV_USER_TG_ID;
+
+    if (!devUserTgId) {
+        const err = new Error('Developer user TG ID (DEV_USER_TG_ID) is not configured on the server.');
+        err.statusCode = 500;
+        err.code = 'DEV_LOGIN_NOT_CONFIGURED';
+        return next(err);
+    }
+
     try {
-        // Find the hardcoded developer user by their tg_id
+        // Find the developer user by their tg_id
         const { rows: users } = await pool.query(
             'SELECT * FROM users WHERE tg_id = $1 AND deleted_at IS NULL',
-            [DEV_USER_TG_ID]
+            [devUserTgId]
         );
 
         if (users.length === 0) {
-            const err = new Error(`Developer user with tg_id ${DEV_USER_TG_ID} not found in the database.`);
+            const err = new Error(`Developer user with tg_id ${devUserTgId} not found in the database.`);
             err.statusCode = 404;
             err.code = 'DEV_USER_NOT_FOUND';
             return next(err);
