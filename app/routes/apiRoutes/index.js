@@ -7,11 +7,16 @@ const { authenticateApiKey } = require('@middleware/authenticateApiKey');
 router.use(authenticateApiKey);
 
 // Import API route handlers
-const getUserCount = require('./users/count');
-const createManager = require('./managers/post');
+const botRoutes = require('./bot');
+
+/**
+ * @swagger
+ * tags:
+ *   name: API - Bot
+ *   description: Endpoints for communication with the Telegram bot serverless function.
+ */
 
 // Define API routes
-router.get('/users/count', getUserCount);
-router.post('/managers', createManager);
+router.use('/bot', botRoutes);
 
 module.exports = router;

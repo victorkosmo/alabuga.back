@@ -62,7 +62,27 @@ async function handleBotUpdate(update: any): Promise<void> {
     }! 👋\n\nI'm your Telegram bot. How can I help you today?`;
   } else if (text === "/help") {
     responseText =
-      "Available commands:\n/start - Start the bot\n/help - Show this help message";
+      "Available commands:\n/start - Start the bot\n/help - Show this help message\n/ping - Check server connection";
+  } else if (text === "/ping") {
+    try {
+      const apiResponse = await fetch(`${API_URL}/api/bot/ping`, {
+        method: "GET",
+        headers: {
+          "x-api-key": API_KEY!,
+        },
+      });
+
+      if (apiResponse.ok) {
+        const data = await apiResponse.json();
+        responseText = `✅ Server connection is OK.\nServer says: "${data.message}"`;
+      } else {
+        const errorData = await apiResponse.text();
+        responseText = `❌ Failed to connect to server. Status: ${apiResponse.status}\nDetails: ${errorData}`;
+      }
+    } catch (error) {
+      console.error("Error during /ping command:", error);
+      responseText = `❌ An error occurred while trying to ping the server.`;
+    }
   }
 
   try {
