@@ -2,7 +2,7 @@
 const webRouter = require('./webRoutes/index');
 const adminRouter = require('./adminRoutes/index');
 const tmaRouter = require('./tmaRoutes/index');
-const apiRouter = require('.apiRoutes/index')
+const apiRouter = require('./apiRoutes/index')
 
 const setupRoutes = (app) => {
     // Health check 
