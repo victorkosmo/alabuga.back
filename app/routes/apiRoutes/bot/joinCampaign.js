@@ -194,7 +194,8 @@ const joinCampaignByCode = async (req, res, next) => {
         );
 
         await client.query('COMMIT');
-
+        
+        res.locals.data = {};
         res.locals.message = `You have successfully joined the campaign "${campaign.title}"! You can now access it in the app.`;
         next();
 
