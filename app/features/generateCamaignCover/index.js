@@ -1,0 +1,1 @@
+// use 'covers' folder in bucket - https://bucket-url/bucket-name/covers/campaign-uuid.png
