@@ -64,6 +64,11 @@ const { isUUID } = require('validator');
  *                       is_completed:
  *                         type: boolean
  *                         description: True if the user has successfully completed this mission.
+ *                       submission_status:
+ *                         type: string
+ *                         enum: [PENDING_REVIEW, APPROVED, REJECTED]
+ *                         nullable: true
+ *                         description: The status of the user's latest submission for this mission. Null if no submission has been made.
  *                       is_locked:
  *                         type: boolean
  *                         description: True if the user's rank is too low or they haven't earned a required achievement.
@@ -111,6 +116,14 @@ const listCampaignMissions = async (req, res, next) => {
                 FROM users u
                 JOIN ranks r ON u.rank_id = r.id
                 WHERE u.id = $1
+            ),
+            latest_completions AS (
+                SELECT
+                    mission_id,
+                    status,
+                    ROW_NUMBER() OVER(PARTITION BY mission_id ORDER BY created_at DESC) as rn
+                FROM mission_completions
+                WHERE user_id = $1
             )
             SELECT
                 m.id,
@@ -123,9 +136,10 @@ const listCampaignMissions = async (req, res, next) => {
                 m.required_achievement_id,
                 ach.name as required_achievement_name,
                 CASE
-                    WHEN mc.id IS NOT NULL THEN true
+                    WHEN mc.status = 'APPROVED' THEN true
                     ELSE false
                 END as is_completed,
+                mc.status as submission_status,
                 CASE
                     WHEN r_req.sequence_order > (SELECT sequence_order FROM user_rank) THEN true
                     WHEN m.required_achievement_id IS NOT NULL AND ua.user_id IS NULL THEN true
@@ -136,7 +150,7 @@ const listCampaignMissions = async (req, res, next) => {
             JOIN
                 ranks r_req ON m.required_rank_id = r_req.id
             LEFT JOIN
-                mission_completions mc ON m.id = mc.mission_id AND mc.user_id = $1 AND mc.status = 'APPROVED'
+                latest_completions mc ON m.id = mc.mission_id AND mc.rn = 1
             LEFT JOIN
                 user_achievements ua ON m.required_achievement_id = ua.achievement_id AND ua.user_id = $1
             LEFT JOIN
