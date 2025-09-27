@@ -117,7 +117,7 @@ const joinCampaignByCode = async (req, res, next) => {
 
         // 2. Find the campaign
         const campaignQuery = `
-            SELECT id, title, status, start_date, end_date, max_participants
+            SELECT id, title, status, start_date, end_date, max_participants, cover_url
             FROM campaigns
             WHERE activation_code = $1 AND deleted_at IS NULL
             FOR UPDATE
@@ -195,8 +195,14 @@ const joinCampaignByCode = async (req, res, next) => {
 
         await client.query('COMMIT');
         
-        res.locals.data = {};
-        res.locals.message = `You have successfully joined the campaign "${campaign.title}"! You can now access it in the app.`;
+        const tmaUrl = `${process.env.TMA_URL}/campaign/${campaign.id}`;
+
+        res.locals.data = {
+            campaign_id: campaign.id,
+            campaign_cover_url: campaign.cover_url,
+            campaign_tma_url: tmaUrl,
+        };
+        res.locals.message = `Welcome to the "${campaign.title}" campaign! Click the button below to start your journey.`;
         next();
 
     } catch (err) {
