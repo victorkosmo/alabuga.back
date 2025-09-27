@@ -57,6 +57,10 @@ const { isUUID } = require('validator');
  *                         format: uuid
  *                         nullable: true
  *                         description: The ID of the achievement required to unlock this mission.
+ *                       required_achievement_name:
+ *                         type: string
+ *                         nullable: true
+ *                         description: The name of the achievement required to unlock this mission.
  *                       is_completed:
  *                         type: boolean
  *                         description: True if the user has successfully completed this mission.
@@ -117,6 +121,7 @@ const listCampaignMissions = async (req, res, next) => {
                 m.mana_reward,
                 m.type,
                 m.required_achievement_id,
+                ach.name as required_achievement_name,
                 CASE
                     WHEN mc.id IS NOT NULL THEN true
                     ELSE false
@@ -134,6 +139,8 @@ const listCampaignMissions = async (req, res, next) => {
                 mission_completions mc ON m.id = mc.mission_id AND mc.user_id = $1 AND mc.status = 'APPROVED'
             LEFT JOIN
                 user_achievements ua ON m.required_achievement_id = ua.achievement_id AND ua.user_id = $1
+            LEFT JOIN
+                achievements ach ON m.required_achievement_id = ach.id
             WHERE
                 m.campaign_id = $2
                 AND m.deleted_at IS NULL

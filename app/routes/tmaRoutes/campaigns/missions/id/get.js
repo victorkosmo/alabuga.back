@@ -72,6 +72,7 @@ const getMissionById = async (req, res, next) => {
             )
             SELECT
                 m.id, m.title, m.description, m.category, m.experience_reward, m.mana_reward, m.competency_rewards, m.type, m.required_achievement_id,
+                ach.name as required_achievement_name,
                 CASE WHEN mc.id IS NOT NULL THEN true ELSE false END as is_completed,
                 CASE
                     WHEN r_req.sequence_order > (SELECT user_rank_order FROM user_data) THEN true
@@ -86,6 +87,7 @@ const getMissionById = async (req, res, next) => {
             LEFT JOIN mission_manual_details mmd ON m.id = mmd.mission_id AND m.type = 'MANUAL_URL'
             LEFT JOIN mission_quiz_details mqd ON m.id = mqd.mission_id AND m.type = 'QUIZ'
             LEFT JOIN user_achievements ua ON m.required_achievement_id = ua.achievement_id AND ua.user_id = $1
+            LEFT JOIN achievements ach ON m.required_achievement_id = ach.id
             WHERE
                 m.id = $2
                 AND m.campaign_id = $3
@@ -112,6 +114,7 @@ const getMissionById = async (req, res, next) => {
             mana_reward: missionData.mana_reward,
             competency_rewards: missionData.competency_rewards,
             required_achievement_id: missionData.required_achievement_id,
+            required_achievement_name: missionData.required_achievement_name,
             type: missionData.type,
             is_completed: missionData.is_completed,
             is_locked: missionData.is_locked,
