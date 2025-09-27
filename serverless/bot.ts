@@ -1,6 +1,7 @@
-// index.ts
+// serverlessFunction/index.ts
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const API_KEY = process.env.API_KEY;
+const API_URL = process.env.API_URL;
 
 if (!BOT_TOKEN || !API_KEY) {
   console.error(
