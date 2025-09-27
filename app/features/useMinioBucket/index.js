@@ -75,7 +75,31 @@ async function generateAndUploadQRCode(textToEncode, fileName) {
   }
 }
 
+/**
+ * Generates a campaign join QR code, uploads it to MinIO, and returns the public URL.
+ *
+ * @param {string} activationCode The 6-digit activation code for the campaign.
+ * @returns {Promise<{url: string}>} A promise that resolves to an object with the public URL.
+ */
+async function generateCampaignQRCode(activationCode) {
+  // 1. Get BOT_USERNAME from .env
+  const botUsername = process.env.BOT_USERNAME;
+  if (!botUsername) {
+    console.error("Missing BOT_USERNAME in .env file");
+    throw new Error("Bot username environment variable not configured.");
+  }
+
+  // 2. Construct the deep link URL
+  const joinUrl = `https://t.me/${botUsername}?start=join_${activationCode}`;
+
+  // 3. Define the file name for the QR code in the bucket
+  const fileName = `${activationCode}.png`;
+
+  // 4. Use the existing function to generate and upload the QR code
+  console.log(`Generating campaign QR code for activation code: ${activationCode}`);
+  return generateAndUploadQRCode(joinUrl, fileName);
+}
+
 
 // Export both functions so you can use them in other files
-module.exports = { uploadFileToMinio, generateAndUploadQRCode };
-
+module.exports = { uploadFileToMinio, generateAndUploadQRCode, generateCampaignQRCode };
