@@ -29,6 +29,7 @@
 const ping = async (req, res, next) => {
     try {
         res.locals.message = 'pong';
+        res.locals.data = rows[0];
         next();
     } catch (err) {
         next(err);
