@@ -1,4 +1,5 @@
 require('dotenv').config();
+const qrcode = require('qrcode');
 
 /**
  * Uploads a file to your public MinIO bucket.
@@ -49,5 +50,32 @@ async function uploadFileToMinio(fileBuffer, originalName, mimeType) {
   }
 }
 
-// Export the function so you can use it in other files
-module.exports = { uploadFileToMinio };
+/**
+ * Generates a QR code, uploads it to MinIO, and returns the public URL.
+ *
+ * @param {string} textToEncode The text or URL you want to encode in the QR code.
+ * @param {string} fileName The name for the QR code image file in the bucket (e.g., 'my-qr-code.png').
+ * @returns {Promise<{url: string}>} A promise that resolves to an object with the public URL.
+ */
+async function generateAndUploadQRCode(textToEncode, fileName) {
+  try {
+    // 1. Generate the QR code image as a data buffer
+    console.log(`Generating QR code for: ${textToEncode}`);
+    const qrCodeBuffer = await qrcode.toBuffer(textToEncode);
+
+    // 2. Use our existing function to upload the buffer
+    console.log(`Uploading QR code as ${fileName}...`);
+    const result = await uploadFileToMinio(qrCodeBuffer, fileName, 'image/png');
+
+    // 3. Return the result which contains the public URL
+    return result;
+  } catch (error) {
+    console.error("❌ Error generating or uploading QR code:", error);
+    throw error;
+  }
+}
+
+
+// Export both functions so you can use them in other files
+module.exports = { uploadFileToMinio, generateAndUploadQRCode };
+
