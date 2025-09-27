@@ -40,6 +40,11 @@ const { isUUID } = require('validator');
  *                           type: integer
  *                           description: The number of users who have joined the campaign.
  *                           example: 25
+ *                         joining_link:
+ *                           type: string
+ *                           nullable: true
+ *                           description: "The Telegram deep link for users to join the campaign. Null if BOT_USERNAME is not configured."
+ *                           example: "https://t.me/my_awesome_tg_bot?start=join_123456"
  *                         missions:
  *                           type: array
  *                           description: A list of missions associated with the campaign, ordered by creation date.
@@ -142,6 +147,18 @@ const getCampaign = async (req, res, next) => {
         const campaign = campaignResult.rows[0];
         campaign.missions = missionsResult.rows;
         campaign.current_participants = participantsResult.rows[0].count;
+
+        // Construct the joining link
+        const botUsername = process.env.BOT_USERNAME;
+        if (botUsername && campaign.activation_code) {
+            campaign.joining_link = `https://t.me/${botUsername}?start=join_${campaign.activation_code}`;
+        } else {
+            campaign.joining_link = null;
+            if (!botUsername) {
+                // Log an error for the server admin, but don't fail the request
+                console.error("Missing BOT_USERNAME in .env file. Cannot generate campaign join link.");
+            }
+        }
 
         res.locals.data = campaign;
         next();

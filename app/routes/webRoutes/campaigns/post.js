@@ -1,6 +1,7 @@
 // app/routes/webRoutes/campaigns/post.js
 const pool = require('@db');
 const crypto = require('crypto');
+const { generateCampaignQRCode } = require('../../../features/useMinioBucket');
 
 /**
  * @swagger
@@ -112,11 +113,14 @@ const createCampaign = async (req, res, next) => {
             }
         }
 
+        // Generate and upload QR code
+        const { url: qrUrl } = await generateCampaignQRCode(activationCode);
+
         const { rows } = await pool.query(
-            `INSERT INTO campaigns (title, description, start_date, end_date, max_participants, created_by, activation_code)
-             VALUES ($1, $2, $3, $4, $5, $6, $7)
+            `INSERT INTO campaigns (title, description, start_date, end_date, max_participants, created_by, activation_code, qr_url)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
              RETURNING *`,
-            [title.trim(), description, start_date, end_date, max_participants, created_by, activationCode]
+            [title.trim(), description, start_date, end_date, max_participants, created_by, activationCode, qrUrl]
         );
 
         res.locals.data = rows[0];

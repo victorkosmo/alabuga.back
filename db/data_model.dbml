@@ -144,6 +144,7 @@ Table "campaigns" {
   "max_participants" integer [null, note: 'Maximum number of users who can join this campaign. NULL for unlimited.']
   "created_by" uuid [ref: > managers.id, not null, note: 'The manager who created this campaign.']
   "metadata" jsonb [null, note: 'Additional campaign-specific settings and configuration data.']
+  "qr_url" text [null, note: 'Img URL for QR code']
   "created_at" timestamp [not null, default: `now()`, note: 'Timestamp when the campaign was created.']
   "updated_at" timestamp [not null, default: `now()`]
   "deleted_at" timestamp [null, note: 'Timestamp for soft deletion of campaigns.']
