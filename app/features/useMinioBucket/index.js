@@ -61,7 +61,7 @@ async function generateAndUploadQRCode(textToEncode, fileName) {
   try {
     // 1. Generate the QR code image as a data buffer
     console.log(`Generating QR code for: ${textToEncode}`);
-    const qrCodeBuffer = await qrcode.toBuffer(textToEncode);
+    const qrCodeBuffer = await qrcode.toBuffer(textToEncode, { width: 512 });
 
     // 2. Use our existing function to upload the buffer
     console.log(`Uploading QR code as ${fileName}...`);
