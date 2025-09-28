@@ -162,7 +162,8 @@ const completeQrMission = async (req, res, next) => {
             notifyMessage += `\n\nВам начислено: ${rewards.join(', ')}.`;
         }
         sendTelegramMessage(tg_user.id, notifyMessage);
-
+        
+        res.locals.data = {};
         res.locals.message = `Congratulations! You have completed the mission "${mission.title}"!`;
         next();
 
