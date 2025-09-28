@@ -139,6 +139,54 @@ async function registerUserForCampaign(
   }
 }
 
+// NEW: Function to call the backend and complete a QR mission
+async function completeQrMissionByCode(
+  tgUser: any,
+  completionCode: string
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const response = await fetch(`${API_URL}/api/bot/complete-qr-mission`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": API_KEY!,
+      },
+      body: JSON.stringify({
+        tg_user: {
+          id: tgUser.id,
+          username: tgUser.username,
+          first_name: tgUser.first_name,
+          last_name: tgUser.last_name,
+        },
+        completion_code: completionCode,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message:
+          data.message ||
+          `Could not complete mission. Status: ${response.status}.`,
+      };
+    }
+
+    return {
+      success: true,
+      message: data.message,
+    };
+  } catch (error) {
+    console.error("Error completing QR mission:", error);
+    return {
+      success: false,
+      message:
+        "An error occurred while processing the QR code. Please try again later.",
+    };
+  }
+}
+
 // MODIFIED: Handle Telegram bot commands, now with deep link logic
 async function handleBotUpdate(update: any): Promise<void> {
   const message = update.message;
@@ -182,6 +230,33 @@ async function handleBotUpdate(update: any): Promise<void> {
         );
       } catch (error) {
         console.error("Failed to send bot response for campaign join:", error);
+      }
+      return; // We've handled the response, so we exit.
+    } else if (parts.length > 1 && parts[1].startsWith("qr_")) {
+      // This is a deep link for a QR mission!
+      const payload = parts[1];
+      const completionCode = payload.substring("qr_".length); // Extracts the code
+
+      console.log(
+        `Attempting QR mission completion for user ${user.id} with code: ${completionCode}`
+      );
+
+      // Call the completion logic
+      const result = await completeQrMissionByCode(user, completionCode);
+
+      try {
+        // Always send a text message back with the result
+        await sendTelegramMessage(chatId, result.message);
+        console.log(
+          `Bot responded to ${
+            message.from.username || message.from.first_name
+          }: ${text}`
+        );
+      } catch (error) {
+        console.error(
+          "Failed to send bot response for QR mission completion:",
+          error
+        );
       }
       return; // We've handled the response, so we exit.
     }

@@ -210,6 +210,8 @@ Table "missions" {
 
   // --- Logic ---
   "type" mission_type [not null, note: 'Defines the completion logic for the mission (e.g., QUIZ, MANUAL_URL).']
+  "completion_code" varchar(50) [unique, null, note: 'Unique code for QR type missions.']
+  "qr_url" text [null, note: 'Img URL for code in QR type missions.']
   "created_by" uuid [ref: > managers.id, not null, note: 'The manager who created this mission.']
   
   // --- Timestamps ---
