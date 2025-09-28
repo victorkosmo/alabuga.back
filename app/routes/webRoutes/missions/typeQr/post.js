@@ -2,6 +2,7 @@
 const pool = require('@db');
 const { isUUID } = require('validator');
 const crypto = require('crypto');
+const { generateMissionQRCode } = require('@features/useMinioBucket');
 
 const generateCompletionCode = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -117,16 +118,19 @@ const createQrMission = async (req, res, next) => {
 
         const completionCode = generateCompletionCode();
 
+        // Generate and upload the QR code, then get its public URL
+        const { url: qrUrl } = await generateMissionQRCode(completionCode);
+
         const missionQuery = `
             INSERT INTO missions (
                 campaign_id, title, description, category, required_rank_id, 
-                required_achievement_id, experience_reward, mana_reward, type, created_by, completion_code
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'QR_CODE', $9, $10)
+                required_achievement_id, experience_reward, mana_reward, type, created_by, completion_code, qr_url
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'QR_CODE', $9, $10, $11)
             RETURNING *;
         `;
         const missionParams = [
             campaign_id, title, description, category, defaultRankId,
-            required_achievement_id, experience_reward, mana_reward, created_by, completionCode
+            required_achievement_id, experience_reward, mana_reward, created_by, completionCode, qrUrl
         ];
         const missionResult = await client.query(missionQuery, missionParams);
         const newMission = missionResult.rows[0];

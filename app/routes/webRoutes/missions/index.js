@@ -48,6 +48,11 @@ router.use(authenticateJWT);
  *           type: string
  *           nullable: true
  *           description: "Secret code for QR_CODE missions."
+ *         qr_url:
+ *           type: string
+ *           format: uri
+ *           nullable: true
+ *           description: "Public URL of the generated QR code image for QR_CODE missions."
  *         competency_rewards:
  *           type: object
  *           nullable: true
