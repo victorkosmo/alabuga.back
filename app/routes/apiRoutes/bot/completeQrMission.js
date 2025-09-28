@@ -140,13 +140,7 @@ const completeQrMission = async (req, res, next) => {
             [userId, missionId, completion_code]
         );
 
-        // 4b. Create a record in qr_triggers for analytics
-        await client.query(
-            'INSERT INTO qr_triggers (user_id, mission_id) VALUES ($1, $2)',
-            [userId, missionId]
-        );
-
-        // 4c. Update user points from the mission itself
+        // 4b. Update user points from the mission itself
         if (mission.experience_reward > 0 || mission.mana_reward > 0) {
             await client.query(
                 `UPDATE users SET experience_points = experience_points + $1, mana_points = mana_points + $2, updated_at = NOW() WHERE id = $3;`,
@@ -154,7 +148,7 @@ const completeQrMission = async (req, res, next) => {
             );
         }
 
-        // 4d. Check for and award any achievements this completion might unlock
+        // 4c. Check for and award any achievements this completion might unlock
         await checkAndAwardAchievements(client, userId, missionId);
 
         await client.query('COMMIT');
