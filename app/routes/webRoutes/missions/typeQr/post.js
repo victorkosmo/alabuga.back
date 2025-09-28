@@ -19,7 +19,7 @@ const generateCompletionCode = () => {
  *     tags:
  *       - Missions
  *     summary: Create a new QR code-based mission
- *     description: Creates a new mission of type 'QR_CODE'. This involves creating a record in the `missions` table and generating a unique completion code stored in `mission_qr_details`.
+ *     description: Creates a new mission of type 'QR_CODE'. This involves creating a record in the `missions` table and generating a unique completion code.
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -64,15 +64,7 @@ const generateCompletionCode = () => {
  *                 success:
  *                   type: boolean
  *                 data:
- *                   allOf:
- *                     - $ref: '#/components/schemas/Mission'
- *                     - type: object
- *                       properties:
- *                         details:
- *                           type: object
- *                           properties:
- *                             completion_code:
- *                               type: string
+ *                   $ref: '#/components/schemas/Mission'
  *                 message:
  *                   type: string
  *       400:
@@ -123,40 +115,25 @@ const createQrMission = async (req, res, next) => {
         }
         const defaultRankId = rankResult.rows[0].id;
 
+        const completionCode = generateCompletionCode();
+
         const missionQuery = `
             INSERT INTO missions (
                 campaign_id, title, description, category, required_rank_id, 
-                required_achievement_id, experience_reward, mana_reward, type, created_by
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'QR_CODE', $9)
+                required_achievement_id, experience_reward, mana_reward, type, created_by, completion_code
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'QR_CODE', $9, $10)
             RETURNING *;
         `;
         const missionParams = [
             campaign_id, title, description, category, defaultRankId,
-            required_achievement_id, experience_reward, mana_reward, created_by
+            required_achievement_id, experience_reward, mana_reward, created_by, completionCode
         ];
         const missionResult = await client.query(missionQuery, missionParams);
         const newMission = missionResult.rows[0];
 
-        const completionCode = generateCompletionCode();
-
-        // NOTE: This assumes a `mission_qr_details` table exists with `mission_id` and `completion_code` columns.
-        const detailsQuery = `
-            INSERT INTO mission_qr_details (mission_id, completion_code)
-            VALUES ($1, $2)
-            RETURNING *;
-        `;
-        const detailsParams = [newMission.id, completionCode];
-        const detailsResult = await client.query(detailsQuery, detailsParams);
-        const newDetails = detailsResult.rows[0];
-
         await client.query('COMMIT');
 
-        res.locals.data = {
-            ...newMission,
-            details: {
-                completion_code: newDetails.completion_code
-            }
-        };
+        res.locals.data = newMission;
         res.locals.statusCode = 201;
         res.locals.message = 'Mission created successfully.';
         next();

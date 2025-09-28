@@ -44,6 +44,10 @@ router.use(authenticateJWT);
  *           type: integer
  *         mana_reward:
  *           type: integer
+ *         completion_code:
+ *           type: string
+ *           nullable: true
+ *           description: "Secret code for QR_CODE missions."
  *         competency_rewards:
  *           type: object
  *           nullable: true
