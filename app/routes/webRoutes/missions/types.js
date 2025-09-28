@@ -55,6 +55,11 @@ const getMissionTypes = (req, res, next) => {
                 value: 'MANUAL_URL',
                 label: 'URL Submission',
                 description: 'A mission where the user submits a URL for manual review.'
+            },
+            {
+                value: 'QR_CODE',
+                label: 'QR Code Scan',
+                description: 'A mission where the user scans a QR code to get a secret code.'
             }
         ];
 

@@ -5,6 +5,7 @@ const { authenticateJWT } = require('@middleware/authenticateJWT');
 
 // Import sub-routers
 const typeUrlRouter = require('./typeUrl');
+const typeQrRouter = require('./typeQr');
 // Import route handlers
 const getMissionTypes = require('./types');
 
@@ -107,5 +108,6 @@ router.get('/types', getMissionTypes);
 
 // Mount sub-routers for different mission types
 router.use('/type-url', typeUrlRouter);
+router.use('/type-qr', typeQrRouter);
 
 module.exports = router;
