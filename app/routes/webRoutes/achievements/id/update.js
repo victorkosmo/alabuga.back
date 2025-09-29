@@ -33,10 +33,6 @@ const { isUUID } = require('validator');
  *               description:
  *                 type: string
  *                 nullable: true
- *               image_url:
- *                 type: string
- *                 format: uri
- *                 nullable: true
  *               mana_reward:
  *                 type: integer
  *                 description: Mana points awarded upon completion.
@@ -80,7 +76,7 @@ const { isUUID } = require('validator');
 const updateAchievement = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { name, description, image_url, mana_reward, unlock_conditions } = req.body;
+        const { name, description, mana_reward, unlock_conditions } = req.body;
 
         if (!isUUID(id)) {
             const err = new Error('Invalid ID format');
@@ -100,10 +96,6 @@ const updateAchievement = async (req, res, next) => {
         if (description !== undefined) {
             updateFields.push(`description = $${paramIndex++}`);
             queryParams.push(description);
-        }
-        if (image_url !== undefined) {
-            updateFields.push(`image_url = $${paramIndex++}`);
-            queryParams.push(image_url);
         }
 
         if (mana_reward !== undefined) {
