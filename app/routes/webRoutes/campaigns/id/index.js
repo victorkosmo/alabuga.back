@@ -6,10 +6,12 @@ const router = express.Router({ mergeParams: true });
 const getCampaign = require('./get');
 const updateCampaign = require('./update');
 const deleteCampaign = require('./delete');
+const uploadCoverHandler = require('./uploadCover');
 
 // Define routes for /campaigns/:id
 router.get('/', getCampaign);
 router.put('/', updateCampaign);
 router.delete('/', deleteCampaign);
+router.post('/cover', uploadCoverHandler);
 
 module.exports = router;

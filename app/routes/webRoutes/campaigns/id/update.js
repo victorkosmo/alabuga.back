@@ -49,6 +49,10 @@ const { isUUID } = require('validator');
  *               max_participants:
  *                 type: integer
  *                 nullable: true
+ *               cover_url:
+ *                 type: string
+ *                 nullable: true
+ *                 description: The updated cover image URL for the campaign. Can be set to null to remove the cover.
  *     responses:
  *       200:
  *         description: Campaign updated successfully.
@@ -77,7 +81,7 @@ const { isUUID } = require('validator');
 const updateCampaign = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { title, description, status, start_date, end_date, max_participants } = req.body;
+        const { title, description, status, start_date, end_date, max_participants, cover_url } = req.body;
 
         if (!isUUID(id)) {
             const err = new Error('Invalid ID format');
@@ -113,6 +117,10 @@ const updateCampaign = async (req, res, next) => {
         if (max_participants !== undefined) {
             updateFields.push(`max_participants = $${paramIndex++}`);
             queryParams.push(max_participants);
+        }
+        if (cover_url !== undefined) {
+            updateFields.push(`cover_url = $${paramIndex++}`);
+            queryParams.push(cover_url);
         }
 
         if (updateFields.length === 0) {
