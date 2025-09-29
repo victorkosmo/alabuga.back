@@ -51,6 +51,11 @@ router.use(authenticateJWT);
  *           nullable: true
  *           description: Maximum number of participants. Null for unlimited.
  *           example: 100
+ *         cover_url:
+ *           type: string
+ *           nullable: true
+ *           description: "URL for the campaign cover image."
+ *           example: "https://minio.example.com/bucket/covers/a1b2c3d4-e5f6-7890-1234-567890abcdef.png"
  *         current_participants:
  *           type: integer
  *           description: The number of users who have currently joined the campaign.

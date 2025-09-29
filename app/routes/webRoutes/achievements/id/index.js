@@ -7,11 +7,13 @@ const getAchievement = require('./get');
 const updateAchievement = require('./update');
 const deleteAchievement = require('./delete');
 const missionRouter = require('./mission');
+const uploadImageHandler = require('./uploadImage');
 
 // Define routes for /achievements/:id
 router.get('/', getAchievement);
 router.put('/', updateAchievement);
 router.delete('/', deleteAchievement);
+router.post('/image', uploadImageHandler);
 
 // Mount the sub-router for mission-related actions
 router.use('/mission', missionRouter);

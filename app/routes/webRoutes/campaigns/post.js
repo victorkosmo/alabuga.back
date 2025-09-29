@@ -2,7 +2,6 @@
 const pool = require('@db');
 const crypto = require('crypto');
 const { generateCampaignQRCode } = require('../../../features/useMinioBucket');
-const { generateCampaignCover } = require('../../../features/generateCamaignCover');
 
 /**
  * @swagger
@@ -124,18 +123,7 @@ const createCampaign = async (req, res, next) => {
             [title.trim(), description, start_date, end_date, max_participants, created_by, activationCode, qrUrl]
         );
 
-        const newCampaign = initialRows[0];
-
-        // Generate and upload cover image
-        const { url: coverUrl } = await generateCampaignCover(newCampaign.title, newCampaign.id);
-
-        // Update campaign with the cover URL
-        const { rows: finalRows } = await pool.query(
-            `UPDATE campaigns SET cover_url = $1 WHERE id = $2 RETURNING *`,
-            [coverUrl, newCampaign.id]
-        );
-
-        res.locals.data = finalRows[0];
+        res.locals.data = initialRows[0];
         res.locals.statusCode = 201;
         res.locals.message = 'Campaign created successfully.';
         next();
