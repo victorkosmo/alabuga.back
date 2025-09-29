@@ -35,11 +35,6 @@ const { isUUID } = require('validator');
  *                 type: string
  *                 nullable: true
  *                 description: The updated description for the store item.
- *               image_url:
- *                 type: string
- *                 format: uri
- *                 nullable: true
- *                 description: The updated URL for the item's image.
  *               cost:
  *                 type: integer
  *                 minimum: 0
@@ -80,7 +75,7 @@ const { isUUID } = require('validator');
 const updateStoreItem = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { name, description, image_url, cost, quantity, is_active } = req.body;
+        const { name, description, cost, quantity, is_active } = req.body;
 
         if (!isUUID(id)) {
             const err = new Error('Invalid ID format');
@@ -89,7 +84,7 @@ const updateStoreItem = async (req, res, next) => {
             return next(err);
         }
 
-        const allowedFields = { name, description, image_url, cost, quantity, is_active };
+        const allowedFields = { name, description, cost, quantity, is_active };
         const updateFields = [];
         const queryParams = [];
         let paramIndex = 1;
