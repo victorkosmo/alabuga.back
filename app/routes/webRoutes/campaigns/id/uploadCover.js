@@ -3,7 +3,7 @@ const pool = require('@db');
 const { isUUID } = require('validator');
 const multer = require('multer');
 const path = require('path');
-const { uploadFileToMinio } = require('@/features/useMinioBucket');
+const { uploadFileToMinio } = require('@features/useMinioBucket');
 
 const upload = multer({
     storage: multer.memoryStorage(),
