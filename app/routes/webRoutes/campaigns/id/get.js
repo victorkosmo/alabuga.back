@@ -40,6 +40,22 @@ const { isUUID } = require('validator');
  *                           type: integer
  *                           description: The number of users who have joined the campaign.
  *                           example: 25
+ *                         stats:
+ *                           type: object
+ *                           description: Statistics for the campaign.
+ *                           properties:
+ *                             participants_joined:
+ *                               type: integer
+ *                               description: The total number of participants who have joined the campaign.
+ *                               example: 25
+ *                             participants_completed_one_mission:
+ *                               type: integer
+ *                               description: The number of participants who have completed at least one mission.
+ *                               example: 15
+ *                             participants_completed_all_missions:
+ *                               type: integer
+ *                               description: The number of participants who have completed all available missions.
+ *                               example: 5
  *                         joining_link:
  *                           type: string
  *                           nullable: true
@@ -126,15 +142,43 @@ const getCampaign = async (req, res, next) => {
             [id]
         );
 
-        const participantsPromise = pool.query(
-            'SELECT COUNT(*)::INTEGER as count FROM user_campaigns WHERE campaign_id = $1 AND is_active = true',
+        const statsPromise = pool.query(
+            `SELECT
+                (SELECT COUNT(*)::INTEGER FROM user_campaigns uc WHERE uc.campaign_id = $1 AND uc.is_active = true) as participants_joined,
+                (
+                    SELECT COUNT(DISTINCT mc.user_id)::INTEGER
+                    FROM mission_completions mc
+                    JOIN missions m ON mc.mission_id = m.id
+                    WHERE m.campaign_id = $1 AND mc.status = 'APPROVED' AND m.deleted_at IS NULL
+                ) as participants_completed_one_mission,
+                (
+                    CASE
+                        WHEN (SELECT COUNT(*) FROM missions m WHERE m.campaign_id = $1 AND m.deleted_at IS NULL) > 0
+                        THEN (
+                            WITH campaign_missions_count AS (
+                                SELECT COUNT(*) as total FROM missions WHERE campaign_id = $1 AND deleted_at IS NULL
+                            )
+                            SELECT COUNT(*)::INTEGER
+                            FROM (
+                                SELECT 1
+                                FROM mission_completions mc
+                                JOIN missions m ON mc.mission_id = m.id
+                                WHERE m.campaign_id = $1 AND mc.status = 'APPROVED' AND m.deleted_at IS NULL
+                                GROUP BY mc.user_id
+                                HAVING COUNT(DISTINCT mc.mission_id) = (SELECT total FROM campaign_missions_count)
+                            ) as completed_all_users
+                        )
+                        ELSE 0
+                    END
+                ) as participants_completed_all_missions
+            `,
             [id]
         );
 
-        const [campaignResult, missionsResult, participantsResult] = await Promise.all([
+        const [campaignResult, missionsResult, statsResult] = await Promise.all([
             campaignPromise,
             missionsPromise,
-            participantsPromise
+            statsPromise
         ]);
 
         if (campaignResult.rows.length === 0) {
@@ -146,7 +190,8 @@ const getCampaign = async (req, res, next) => {
 
         const campaign = campaignResult.rows[0];
         campaign.missions = missionsResult.rows;
-        campaign.current_participants = participantsResult.rows[0].count;
+        campaign.stats = statsResult.rows[0];
+        campaign.current_participants = statsResult.rows[0].participants_joined;
 
         // Construct the joining link
         const botUsername = process.env.BOT_USERNAME;
