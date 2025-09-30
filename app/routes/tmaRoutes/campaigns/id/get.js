@@ -76,7 +76,18 @@ const getCampaignById = async (req, res, next) => {
                                 a.experience_reward,
                                 a.mana_reward,
                                 CASE WHEN ua.user_id IS NOT NULL THEN true ELSE false END AS is_earned,
-                                ua.awarded_at
+                                ua.awarded_at,
+                                COALESCE(
+                                    (
+                                        SELECT json_agg(json_build_object('id', m.id, 'title', m.title))
+                                        FROM missions m
+                                        WHERE m.id IN (
+                                            SELECT (value::uuid)
+                                            FROM jsonb_array_elements_text(a.unlock_conditions -> 'required_missions')
+                                        )
+                                    ),
+                                    '[]'::json
+                                ) AS required_missions
                             FROM
                                 achievements a
                             LEFT JOIN
