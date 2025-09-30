@@ -72,16 +72,69 @@ const listCampaigns = async (req, res, next) => {
             'SELECT COUNT(*) FROM campaigns WHERE deleted_at IS NULL'
         );
         const dataPromise = pool.query(
-            `SELECT 
-                c.*,
-                (SELECT COUNT(*) FROM user_campaigns uc WHERE uc.campaign_id = c.id AND uc.is_active = true)::INTEGER AS current_participants
-             FROM 
+            `SELECT
+                c.id,
+                c.title,
+                c.description,
+                c.activation_code,
+                c.status,
+                c.start_date,
+                c.end_date,
+                c.max_participants,
+                c.created_by,
+                c.metadata,
+                c.qr_url,
+                c.cover_url,
+                c.created_at,
+                c.updated_at,
+                json_build_object(
+                    'participants_joined', (SELECT COUNT(*)::INTEGER FROM user_campaigns uc WHERE uc.campaign_id = c.id AND uc.is_active = true),
+                    'participants_completed_one_mission', (
+                        SELECT COUNT(DISTINCT mc.user_id)::INTEGER
+                        FROM mission_completions mc
+                        JOIN missions m ON mc.mission_id = m.id
+                        WHERE m.campaign_id = c.id AND mc.status = 'APPROVED' AND m.deleted_at IS NULL
+                    ),
+                    'participants_completed_all_missions', (
+                        CASE
+                            WHEN (SELECT COUNT(*) FROM missions m WHERE m.campaign_id = c.id AND m.deleted_at IS NULL) > 0
+                            THEN (
+                                WITH campaign_missions_count AS (
+                                    SELECT COUNT(*) as total FROM missions WHERE campaign_id = c.id AND deleted_at IS NULL
+                                )
+                                SELECT COUNT(*)::INTEGER
+                                FROM (
+                                    SELECT 1
+                                    FROM mission_completions mc
+                                    JOIN missions m ON mc.mission_id = m.id
+                                    WHERE m.campaign_id = c.id AND mc.status = 'APPROVED' AND m.deleted_at IS NULL
+                                    GROUP BY mc.user_id
+                                    HAVING COUNT(DISTINCT mc.mission_id) = (SELECT total FROM campaign_missions_count)
+                                ) as completed_all_users
+                            )
+                            ELSE 0
+                        END
+                    )
+                ) as stats,
+                COALESCE(
+                    (SELECT json_agg(json_build_object('title', a.name, 'image_url', a.image_url))
+                     FROM achievements a
+                     WHERE a.campaign_id = c.id),
+                    '[]'::json
+                ) as achievements,
+                COALESCE(
+                    (SELECT json_agg(json_build_object('title', si.name, 'image_url', si.image_url))
+                     FROM store_items si
+                     WHERE si.campaign_id = c.id AND si.deleted_at IS NULL),
+                    '[]'::json
+                ) as store_items
+            FROM
                 campaigns c
-             WHERE 
+            WHERE
                 c.deleted_at IS NULL
-             ORDER BY 
+            ORDER BY
                 c.created_at DESC
-             LIMIT $1 OFFSET $2`,
+            LIMIT $1 OFFSET $2`,
             [limit, offset]
         );
 

@@ -57,7 +57,48 @@ const getCampaignById = async (req, res, next) => {
 
         const query = `
             SELECT
-                c.*
+                c.id,
+                c.title,
+                c.description,
+                c.status,
+                c.start_date,
+                c.end_date,
+                c.cover_url,
+                COALESCE(
+                    (
+                        SELECT json_agg(ach)
+                        FROM (
+                            SELECT
+                                a.id,
+                                a.name,
+                                a.description,
+                                a.image_url,
+                                a.experience_reward,
+                                a.mana_reward,
+                                CASE WHEN ua.user_id IS NOT NULL THEN true ELSE false END AS is_earned,
+                                ua.awarded_at,
+                                COALESCE(
+                                    (
+                                        SELECT json_agg(json_build_object('id', m.id, 'title', m.title))
+                                        FROM missions m
+                                        WHERE m.id IN (
+                                            SELECT (value::uuid)
+                                            FROM jsonb_array_elements_text(a.unlock_conditions -> 'required_missions')
+                                        )
+                                    ),
+                                    '[]'::json
+                                ) AS required_missions
+                            FROM
+                                achievements a
+                            LEFT JOIN
+                                user_achievements ua ON a.id = ua.achievement_id AND ua.user_id = $1
+                            WHERE
+                                a.campaign_id = c.id
+                            ORDER BY a.created_at ASC
+                        ) ach
+                    ),
+                    '[]'::json
+                ) AS achievements
             FROM
                 campaigns c
             JOIN
