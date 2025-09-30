@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticateTmaJWT } = require('@middleware/authenticateTmaJWT');
 const submitUrlMission = require('./submitUrl');
+const submitQuizMission = require('./submitQuiz');
 
 /**
  * @swagger
@@ -12,5 +13,8 @@ const submitUrlMission = require('./submitUrl');
 
 // This route corresponds to POST /telegram/completions/submit-url
 router.post('/submit-url', authenticateTmaJWT, submitUrlMission);
+
+// This route corresponds to POST /telegram/completions/submit-quiz
+router.post('/submit-quiz', authenticateTmaJWT, submitQuizMission);
 
 module.exports = router;

@@ -60,6 +60,11 @@ const getMissionTypes = (req, res, next) => {
                 value: 'QR_CODE',
                 label: 'QR Code Scan',
                 description: 'A mission where the user scans a QR code to get a secret code.'
+            },
+            {
+                value: 'QUIZ',
+                label: 'Quiz',
+                description: 'A mission where the user answers a series of questions.'
             }
         ];
 
