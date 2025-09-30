@@ -66,7 +66,7 @@ const getCampaignById = async (req, res, next) => {
                 c.cover_url,
                 COALESCE(
                     (
-                        SELECT json_agg(ach ORDER BY a.created_at ASC)
+                        SELECT json_agg(ach)
                         FROM (
                             SELECT
                                 a.id,
@@ -83,6 +83,7 @@ const getCampaignById = async (req, res, next) => {
                                 user_achievements ua ON a.id = ua.achievement_id AND ua.user_id = $1
                             WHERE
                                 a.campaign_id = c.id
+                            ORDER BY a.created_at ASC
                         ) ach
                     ),
                     '[]'::json
