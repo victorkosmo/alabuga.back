@@ -48,23 +48,21 @@
  */
 const getMissionTypes = (req, res, next) => {
     try {
-        // Currently, only MANUAL_URL is supported for creation via the web panel.
-        // This can be expanded as more mission type creation routes are added.
         const supportedTypes = [
             {
-                value: 'MANUAL_URL',
-                label: 'URL Submission',
-                description: 'A mission where the user submits a URL for manual review.'
+                "value": "MANUAL_URL",
+                "label": "Отправка ссылки",
+                "description": "Участник находит в сети нужную информацию (статью, фото, пост) и присылает ссылку. Организатор проверяет её вручную. Идеально для творческих и социальных заданий."
             },
             {
-                value: 'QR_CODE',
-                label: 'QR Code Scan',
-                description: 'A mission where the user scans a QR code to get a secret code.'
+                "value": "QR_CODE",
+                "label": "Сканирование QR-кода",
+                "description": "Участник сканирует QR-код камерой телефона. Задание для квестов, знакомств и 'оживления' пространства на мероприятии или в офисе. Выполнение засчитывается автоматически."
             },
             {
-                value: 'QUIZ',
-                label: 'Quiz',
-                description: 'A mission where the user answers a series of questions.'
+                "value": "QUIZ",
+                "label": "Квиз (викторина)",
+                "description": "Участник отвечает на вопросы с вариантами ответов. Отлично подходит для проверки знаний после обучения, докладов или для сбора обратной связи в игровой форме."
             }
         ];
 
