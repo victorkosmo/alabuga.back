@@ -120,13 +120,13 @@ const listCampaigns = async (req, res, next) => {
                     (SELECT json_agg(json_build_object('title', a.name, 'image_url', a.image_url))
                      FROM achievements a
                      WHERE a.campaign_id = c.id),
-                    '[]'::jsonb
+                    '[]'::json
                 ) as achievements,
                 COALESCE(
                     (SELECT json_agg(json_build_object('title', si.name, 'image_url', si.image_url))
                      FROM store_items si
                      WHERE si.campaign_id = c.id AND si.deleted_at IS NULL),
-                    '[]'::jsonb
+                    '[]'::json
                 ) as store_items
             FROM
                 campaigns c
