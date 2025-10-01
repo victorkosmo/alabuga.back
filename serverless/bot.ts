@@ -304,10 +304,13 @@ async function handleBotUpdate(update: any): Promise<void> {
       const result = await completeQrMissionByCode(user, completionCode);
 
       try {
-        // Always send a text message back with the result
-        await sendTelegramMessage(chatId, result.message);
+        // If the operation failed, send the error message back to the user.
+        // On success, the backend API handles the notification, so we do nothing here.
+        if (!result.success) {
+          await sendTelegramMessage(chatId, result.message);
+        }
         console.log(
-          `Бот ответил ${
+          `Обработан QR-код от ${
             message.from.username || message.from.first_name
           }: ${text}`
         );

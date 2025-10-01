@@ -1,6 +1,7 @@
 const pool = require('@db');
 const { isUUID } = require('validator');
 const { checkAndAwardAchievements } = require('@features/achievementChecker');
+const { sendTelegramMessage } = require('@features/sendTelegramMsg');
 
 /**
  * @swagger
@@ -104,7 +105,7 @@ const submitQuizMission = async (req, res, next) => {
         const validationQuery = `
             WITH mission_data AS (
                 SELECT 
-                    m.id, m.campaign_id, m.type, m.experience_reward, m.mana_reward, m.competency_rewards,
+                    m.id, m.title, m.campaign_id, m.type, m.experience_reward, m.mana_reward, m.competency_rewards,
                     r.sequence_order as required_rank,
                     mqd.questions, mqd.pass_threshold
                 FROM missions m
@@ -114,6 +115,7 @@ const submitQuizMission = async (req, res, next) => {
             ),
             user_data AS (
                 SELECT 
+                    u.tg_id,
                     r.sequence_order as user_rank,
                     EXISTS(
                         SELECT 1 FROM user_campaigns uc 
@@ -207,6 +209,10 @@ const submitQuizMission = async (req, res, next) => {
             await checkAndAwardAchievements(client, userId, mission_id);
 
             await client.query('COMMIT');
+
+            // Send notification to user
+            const notifyMessage = `✅ Квиз «${check.title}» пройден.`;
+            sendTelegramMessage(check.tg_id, notifyMessage);
 
             res.locals.data = {
                 passed: true,

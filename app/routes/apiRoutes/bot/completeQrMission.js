@@ -158,7 +158,6 @@ const completeQrMission = async (req, res, next) => {
         sendTelegramMessage(tg_user.id, notifyMessage);
         
         res.locals.data = {};
-        res.locals.message = `Congratulations! You have completed the mission "${mission.title}"!`;
         next();
 
     } catch (err) {
