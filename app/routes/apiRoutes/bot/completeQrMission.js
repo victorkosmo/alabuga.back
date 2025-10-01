@@ -154,13 +154,7 @@ const completeQrMission = async (req, res, next) => {
         await client.query('COMMIT');
 
         // 5. Send notification (fire-and-forget after commit)
-        let notifyMessage = `🎉 Поздравляем! Вы выполнили задание «${mission.title}»!`;
-        const rewards = [];
-        if (mission.experience_reward > 0) rewards.push(`${mission.experience_reward} опыта`);
-        if (mission.mana_reward > 0) rewards.push(`${mission.mana_reward} маны`);
-        if (rewards.length > 0) {
-            notifyMessage += `\n\nВам начислено: ${rewards.join(', ')}.`;
-        }
+        const notifyMessage = `✅ Задание «${mission.title}» выполнено.`;
         sendTelegramMessage(tg_user.id, notifyMessage);
         
         res.locals.data = {};
