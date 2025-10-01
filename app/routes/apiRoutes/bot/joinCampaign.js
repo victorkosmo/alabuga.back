@@ -199,11 +199,12 @@ const joinCampaignByCode = async (req, res, next) => {
 
         res.locals.data = {
             campaign_id: campaign.id,
+            title: campaign.title,
             campaign_cover_url: campaign.cover_url,
-            campaign_tma_url: tmaUrl, // Add this URL for the button
+            campaign_tma_url: tmaUrl,
         };
-        // This message now serves as the ultimate fallback if all rich messages fail
-        res.locals.message = `Welcome to the "${campaign.title}" campaign! Start your journey here:\n${tmaUrl}`;
+        // Message for internal logging ONLY. The bot will ignore this on success.
+        res.locals.message = `User ${tg_user.id} successfully joined campaign ${campaign.id}.`;
         next();
 
     } catch (err) {

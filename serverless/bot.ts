@@ -99,14 +99,18 @@ async function sendTelegramPhotoWithButton(
  */
 async function sendCampaignJoinConfirmation(
   chatId: string | number,
-  message: string, // The message from the API, which includes the URL for the final fallback
+  campaignTitle: string, // CHANGED: Now accepts title instead of a pre-made message
   coverUrl: string | undefined,
   tmaUrl: string
 ) {
+  // The bot now creates the message. It's always clean and in Russian.
+  const successMessage = `Поздравляем! Вы присоединились к кампании «${campaignTitle}»!`;
+
   // Fallback 1: Try to send Photo with Button
   if (coverUrl) {
     try {
-      await sendTelegramPhotoWithButton(chatId, coverUrl, message, tmaUrl);
+      // Use the clean message as the caption
+      await sendTelegramPhotoWithButton(chatId, coverUrl, successMessage, tmaUrl);
       console.log("Успешно: отправлено фото с кнопкой.");
       return; // Success
     } catch (error) {
@@ -126,7 +130,8 @@ async function sendCampaignJoinConfirmation(
         ],
       ],
     };
-    await sendTelegramMessage(chatId, message, replyMarkup);
+    // Use the clean message as the text
+    await sendTelegramMessage(chatId, successMessage, replyMarkup);
     console.log("Успешно: отправлено сообщение с кнопкой.");
     return; // Success
   } catch (error) {
@@ -135,8 +140,9 @@ async function sendCampaignJoinConfirmation(
 
   // Fallback 3: Send Plain Text Message
   try {
-    // The `message` from the API already contains the full text and URL.
-    await sendTelegramMessage(chatId, message);
+    // ONLY in this final fallback do we add the URL to the text.
+    const fallbackMessage = `${successMessage}\n\nНачать путешествие:\n${tmaUrl}`;
+    await sendTelegramMessage(chatId, fallbackMessage);
     console.log("Успешно: отправлено простое текстовое сообщение.");
   } catch (error) {
     console.error("КРИТИЧЕСКАЯ ОШИБКА: Не удалось отправить даже текстовое подтверждение.", error);
@@ -262,16 +268,17 @@ async function handleBotUpdate(update: any): Promise<void> {
       const result = await registerUserForCampaign(user, activationCode);
 
       try {
-        if (result.success && result.data?.campaign_tma_url) {
-          // SUCCESS: We have the URL, so we can try sending rich messages
+        // Check for the data the bot needs to build the message
+        if (result.success && result.data?.title && result.data?.campaign_tma_url) {
+          // SUCCESS: We have the data, so we can try sending rich messages
           await sendCampaignJoinConfirmation(
             chatId,
-            result.message, // The message from the API
-            result.data.campaign_cover_url, // can be undefined, handled inside
-            result.data.campaign_tma_url // is defined here
+            result.data.title, // PASS THE TITLE
+            result.data.campaign_cover_url,
+            result.data.campaign_tma_url
           );
         } else {
-          // FAILURE or missing TMA URL: Send a simple text message with the error/message
+          // FAILURE or missing data: Send a simple text message with the error/message
           // This is the ultimate fallback.
           await sendTelegramMessage(chatId, result.message);
         }
