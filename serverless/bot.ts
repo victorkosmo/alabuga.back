@@ -2,6 +2,7 @@
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const API_KEY = process.env.API_KEY;
 const API_URL = process.env.API_URL;
+const TMA_URL = process.env.TMA_URL;
 
 if (!BOT_TOKEN || !API_KEY) {
   console.error(
