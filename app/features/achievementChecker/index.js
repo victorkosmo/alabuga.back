@@ -123,12 +123,8 @@ const notifyUserOfAchievement = async (client, userId, achievement) => {
             const { tg_id: tgId } = userResult.rows[0];
             let message = `🎉 Поздравляем! Вы получили достижение «${achievement.name}»!`;
             
-            const rewards = [];
-            if (achievement.experience_reward > 0) rewards.push(`${achievement.experience_reward} опыта`);
-            if (achievement.mana_reward > 0) rewards.push(`${achievement.mana_reward} маны`);
-
-            if (rewards.length > 0) {
-                message += `\n\nВам начислено: ${rewards.join(', ')}.`;
+            if (achievement.mana_reward > 0) {
+                message += `\n\nВам начислено: ${achievement.mana_reward} маны.`;
             }
 
             // This is fire-and-forget

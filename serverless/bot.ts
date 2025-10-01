@@ -2,6 +2,7 @@
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const API_KEY = process.env.API_KEY;
 const API_URL = process.env.API_URL;
+const TMA_URL = process.env.TMA_URL;
 
 if (!BOT_TOKEN || !API_KEY) {
   console.error(
@@ -19,18 +20,24 @@ function checkApiKey(request: Request): boolean {
 // Send message to Telegram user
 async function sendTelegramMessage(
   chatId: string | number,
-  text: string
+  text: string,
+  replyMarkup?: any
 ): Promise<any> {
   try {
+    const body: any = {
+      chat_id: chatId,
+      text: text,
+    };
+    if (replyMarkup) {
+      body.reply_markup = replyMarkup;
+    }
+
     const response = await fetch(
       `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: text,
-        }),
+        body: JSON.stringify(body),
       }
     );
 
@@ -41,7 +48,7 @@ async function sendTelegramMessage(
 
     return data;
   } catch (error) {
-    console.error("Error sending Telegram message:", error);
+    console.error("Ошибка отправки сообщения в Telegram:", error);
     throw error;
   }
 }
@@ -83,11 +90,11 @@ async function sendTelegramPhotoWithButton(
 
     const data = await response.json();
     if (!data.ok) {
-      throw new Error(`Telegram API error (sendPhoto): ${data.description}`);
+      throw new Error(`Ошибка Telegram API (sendPhoto): ${data.description}`);
     }
     return data;
   } catch (error) {
-    console.error("Error sending Telegram photo with button:", error);
+    console.error("Ошибка отправки фото с кнопкой в Telegram:", error);
     throw error;
   }
 }
@@ -120,7 +127,7 @@ async function registerUserForCampaign(
     if (!response.ok) {
       return {
         success: false,
-        message: data.message || `Could not join. Status: ${response.status}.`,
+        message: data.message || `Не удалось присоединиться. Статус: ${response.status}.`,
       };
     }
 
@@ -131,10 +138,10 @@ async function registerUserForCampaign(
       data: data.data, // This contains the URLs
     };
   } catch (error) {
-    console.error("Error registering user for campaign:", error);
+    console.error("Ошибка регистрации пользователя в кампании:", error);
     return {
       success: false,
-      message: "An error occurred while trying to join the campaign. Please try again later.",
+      message: "Произошла ошибка при попытке присоединиться к кампании. Пожалуйста, попробуйте позже.",
     };
   }
 }
@@ -169,7 +176,7 @@ async function completeQrMissionByCode(
         success: false,
         message:
           data.message ||
-          `Could not complete mission. Status: ${response.status}.`,
+          `Не удалось выполнить миссию. Статус: ${response.status}.`,
       };
     }
 
@@ -178,11 +185,11 @@ async function completeQrMissionByCode(
       message: data.message,
     };
   } catch (error) {
-    console.error("Error completing QR mission:", error);
+    console.error("Ошибка выполнения QR-миссии:", error);
     return {
       success: false,
       message:
-        "An error occurred while processing the QR code. Please try again later.",
+        "Произошла ошибка при обработке QR-кода. Пожалуйста, попробуйте позже.",
     };
   }
 }
@@ -204,7 +211,7 @@ async function handleBotUpdate(update: any): Promise<void> {
       const payload = parts[1];
       const activationCode = payload.substring("join_".length); // Extracts the code
       
-      console.log(`Attempting campaign registration for user ${user.id} with code: ${activationCode}`);
+      console.log(`Попытка регистрации в кампании для пользователя ${user.id} с кодом: ${activationCode}`);
 
       // Call the registration logic
       const result = await registerUserForCampaign(user, activationCode);
@@ -216,7 +223,7 @@ async function handleBotUpdate(update: any): Promise<void> {
             chatId,
             result.data.campaign_cover_url,
             result.message,
-            "🚀 Open Campaign",
+            "🚀 Открыть кампанию",
             result.data.campaign_tma_url
           );
         } else {
@@ -224,12 +231,12 @@ async function handleBotUpdate(update: any): Promise<void> {
           await sendTelegramMessage(chatId, result.message);
         }
         console.log(
-          `Bot responded to ${
+          `Бот ответил ${
             message.from.username || message.from.first_name
           }: ${text}`
         );
       } catch (error) {
-        console.error("Failed to send bot response for campaign join:", error);
+        console.error("Не удалось отправить ответ бота для присоединения к кампании:", error);
       }
       return; // We've handled the response, so we exit.
     } else if (parts.length > 1 && parts[1].startsWith("qr_")) {
@@ -238,7 +245,7 @@ async function handleBotUpdate(update: any): Promise<void> {
       const completionCode = payload.substring("qr_".length); // Extracts the code
 
       console.log(
-        `Attempting QR mission completion for user ${user.id} with code: ${completionCode}`
+        `Попытка выполнения QR-миссии для пользователя ${user.id} с кодом: ${completionCode}`
       );
 
       // Call the completion logic
@@ -248,13 +255,13 @@ async function handleBotUpdate(update: any): Promise<void> {
         // Always send a text message back with the result
         await sendTelegramMessage(chatId, result.message);
         console.log(
-          `Bot responded to ${
+          `Бот ответил ${
             message.from.username || message.from.first_name
           }: ${text}`
         );
       } catch (error) {
         console.error(
-          "Failed to send bot response for QR mission completion:",
+          "Не удалось отправить ответ бота для выполнения QR-миссии:",
           error
         );
       }
@@ -262,16 +269,41 @@ async function handleBotUpdate(update: any): Promise<void> {
     }
   }
 
-  // For all other commands, we prepare a text response and send it at the end.
-  let responseText = "Unknown command. Type /help for a list of commands.";
+  // Handle plain /start command
+  if (text === "/start") {
+    const welcomeMessage = `Привет, ${
+      user.first_name || "пользователь"
+    }! 👋\n\nДобро пожаловать! Откройте приложение, чтобы начать.`;
+    const replyMarkup = {
+      inline_keyboard: [
+        [
+          {
+            text: "🚀 Открыть приложение",
+            web_app: { url: TMA_URL! },
+          },
+        ],
+      ],
+    };
 
-  if (text === "/start") { // This will only match plain "/start" now
-    responseText = `Hello ${
-      user.first_name || "there"
-    }! 👋\n\nI'm your Telegram bot. How can I help you today?`;
-  } else if (text === "/help") {
+    try {
+      await sendTelegramMessage(chatId, welcomeMessage, replyMarkup);
+      console.log(
+        `Бот ответил ${
+          message.from.username || message.from.first_name
+        }: ${text}`
+      );
+    } catch (error) {
+      console.error("Не удалось отправить ответ бота для /start:", error);
+    }
+    return; // We've handled the response, so we exit.
+  }
+
+  // For all other commands, we prepare a text response and send it at the end.
+  let responseText = "Неизвестная команда. Введите /help для списка команд.";
+
+  if (text === "/help") {
     responseText =
-      "Available commands:\n/start - Start the bot\n/help - Show this help message\n/ping - Check server connection";
+      "Доступные команды:\n/start - Запустить бота\n/help - Показать это сообщение\n/ping - Проверить соединение с сервером";
   } else if (text === "/ping") {
     try {
       const apiResponse = await fetch(`${API_URL}/api/bot/ping`, {
@@ -283,26 +315,26 @@ async function handleBotUpdate(update: any): Promise<void> {
 
       if (apiResponse.ok) {
         const data = await apiResponse.json();
-        responseText = `✅ Server connection is OK.\nServer says: "${data.message}"`;
+        responseText = `✅ Соединение с сервером в порядке.\nОтвет сервера: "${data.message}"`;
       } else {
         const errorData = await apiResponse.text();
-        responseText = `❌ Failed to connect to server. Status: ${apiResponse.status}\nDetails: ${errorData}`;
+        responseText = `❌ Не удалось подключиться к серверу. Статус: ${apiResponse.status}\nДетали: ${errorData}`;
       }
     } catch (error) {
-      console.error("Error during /ping command:", error);
-      responseText = `❌ An error occurred while trying to ping the server.`;
+      console.error("Ошибка при выполнении команды /ping:", error);
+      responseText = `❌ Произошла ошибка при попытке проверить соединение с сервером.`;
     }
   }
 
   try {
     await sendTelegramMessage(chatId, responseText);
     console.log(
-      `Bot responded to ${
+      `Бот ответил ${
         message.from.username || message.from.first_name
       }: ${text}`
     );
   } catch (error) {
-    console.error("Failed to send bot response:", error);
+    console.error("Не удалось отправить ответ бота:", error);
   }
 }
 
@@ -330,7 +362,7 @@ export default {
           return new Response(
             JSON.stringify({
               success: false,
-              message: "Unauthorized: Invalid API key",
+              message: "Не авторизован: неверный API ключ",
             }),
             {
               headers: { "Content-Type": "application/json" },
@@ -349,7 +381,7 @@ export default {
           return new Response(
             JSON.stringify({
               success: false,
-              message: "Missing required fields: chat_id and message",
+              message: "Отсутствуют обязательные поля: chat_id и message",
             }),
             {
               headers: { "Content-Type": "application/json" },
@@ -363,7 +395,7 @@ export default {
         return new Response(
           JSON.stringify({
             success: true,
-            message: "Message sent successfully",
+            message: "Сообщение успешно отправлено",
           }),
           {
             headers: { "Content-Type": "application/json" },
@@ -385,16 +417,16 @@ export default {
 
       // 404 for other routes
       return new Response(
-        JSON.stringify({ success: false, message: "Not Found" }),
+        JSON.stringify({ success: false, message: "Не найдено" }),
         {
           headers: { "Content-Type": "application/json" },
           status: 404,
         }
       );
     } catch (error) {
-      console.error("Server error:", error);
+      console.error("Ошибка сервера:", error);
       return new Response(
-        JSON.stringify({ success: false, message: "Internal Server Error" }),
+        JSON.stringify({ success: false, message: "Внутренняя ошибка сервера" }),
         {
           headers: { "Content-Type": "application/json" },
           status: 500,

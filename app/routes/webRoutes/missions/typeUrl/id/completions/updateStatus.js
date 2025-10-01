@@ -176,7 +176,7 @@ const updateCompletionStatus = async (req, res, next) => {
 
             if (userResult.rowCount > 0) {
                 const { tg_id: tgId } = userResult.rows[0];
-                const message = `Поздравляем! Ваше задание «${missionTitle}» было одобрено.\n\nВы получили:\n- ${experience_reward} опыта\n- ${mana_reward} маны`;
+                const message = `✅ Задание «${missionTitle}» принято.`;
                 
                 // Send notification, but don't let it fail the transaction
                 await sendTelegramMessage(tgId, message);

@@ -1,5 +1,6 @@
 const pool = require('@db');
 const { isUUID } = require('validator');
+const { checkAndAwardAchievements } = require('@features/achievementChecker');
 
 /**
  * @swagger
@@ -202,6 +203,9 @@ const submitQuizMission = async (req, res, next) => {
             );
             // TODO: Handle competency_rewards and rank-up logic in the future.
 
+            // Check for and award any achievements this completion might unlock
+            await checkAndAwardAchievements(client, userId, mission_id);
+
             await client.query('COMMIT');
 
             res.locals.data = {
@@ -210,11 +214,10 @@ const submitQuizMission = async (req, res, next) => {
                 total_questions: dbQuestions.length,
                 correct_answers: correctAnswers,
                 rewards: {
-                    experience: check.experience_reward,
                     mana: check.mana_reward
                 }
             };
-            res.locals.message = 'Quiz completed successfully! Rewards have been granted.';
+            res.locals.message = 'Квиз успешно пройден!';
             next();
         } else {
             await client.query('ROLLBACK');
@@ -226,7 +229,7 @@ const submitQuizMission = async (req, res, next) => {
                 correct_answers: correctAnswers,
                 required_score: check.pass_threshold
             };
-            res.locals.message = 'Quiz failed. Please try again.';
+            res.locals.message = 'Квиз не пройден. Пожалуйста, попробуйте еще раз.';
             next();
         }
     } catch (err) {
