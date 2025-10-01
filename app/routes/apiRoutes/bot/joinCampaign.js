@@ -200,9 +200,8 @@ const joinCampaignByCode = async (req, res, next) => {
         res.locals.data = {
             campaign_id: campaign.id,
             campaign_cover_url: campaign.cover_url,
-            campaign_tma_url: tmaUrl,
         };
-        res.locals.message = `Welcome to the "${campaign.title}" campaign! Click the button below to start your journey.`;
+        res.locals.message = `Welcome to the "${campaign.title}" campaign! Start your journey here:\n${tmaUrl}`;
         next();
 
     } catch (err) {

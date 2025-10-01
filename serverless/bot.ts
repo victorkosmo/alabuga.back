@@ -53,27 +53,13 @@ async function sendTelegramMessage(
   }
 }
 
-// NEW: Function to send a photo with a caption and a TMA button
-async function sendTelegramPhotoWithButton(
+// NEW: Function to send a photo with a caption
+async function sendTelegramPhoto(
   chatId: string | number,
   photoUrl: string,
-  caption: string,
-  buttonText: string,
-  buttonTmaUrl: string
+  caption: string
 ): Promise<any> {
   try {
-    // This is the JSON structure for an inline button that opens a Web App (TMA)
-    const replyMarkup = {
-      inline_keyboard: [
-        [
-          {
-            text: buttonText,
-            web_app: { url: buttonTmaUrl },
-          },
-        ],
-      ],
-    };
-
     const response = await fetch(
       `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`,
       {
@@ -83,7 +69,6 @@ async function sendTelegramPhotoWithButton(
           chat_id: chatId,
           photo: photoUrl,
           caption: caption,
-          reply_markup: replyMarkup, // Attach the button here
         }),
       }
     );
@@ -94,7 +79,7 @@ async function sendTelegramPhotoWithButton(
     }
     return data;
   } catch (error) {
-    console.error("Ошибка отправки фото с кнопкой в Telegram:", error);
+    console.error("Ошибка отправки фото в Telegram:", error);
     throw error;
   }
 }
@@ -217,14 +202,12 @@ async function handleBotUpdate(update: any): Promise<void> {
       const result = await registerUserForCampaign(user, activationCode);
 
       try {
-        if (result.success && result.data?.campaign_cover_url && result.data?.campaign_tma_url) {
-          // SUCCESS: Send the rich message with photo and button
-          await sendTelegramPhotoWithButton(
+        if (result.success && result.data?.campaign_cover_url) {
+          // SUCCESS: Send the rich message with photo
+          await sendTelegramPhoto(
             chatId,
             result.data.campaign_cover_url,
-            result.message,
-            "🚀 Открыть кампанию",
-            result.data.campaign_tma_url
+            result.message
           );
         } else {
           // FAILURE or missing data: Send a simple text message with the error/message
