@@ -1,5 +1,6 @@
 const pool = require('@db');
 const { isUUID } = require('validator');
+const { checkAndAwardAchievements } = require('@features/achievementChecker');
 
 /**
  * @swagger
@@ -201,6 +202,9 @@ const submitQuizMission = async (req, res, next) => {
                 [check.experience_reward, check.mana_reward, userId]
             );
             // TODO: Handle competency_rewards and rank-up logic in the future.
+
+            // Check for and award any achievements this completion might unlock
+            await checkAndAwardAchievements(client, userId, mission_id);
 
             await client.query('COMMIT');
 
