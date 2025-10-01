@@ -10,14 +10,11 @@ if (!BOT_TOKEN || !API_KEY) {
   );
   process.exit(1);
 }
-
-// API Key middleware
 function checkApiKey(request: Request): boolean {
   const apiKey = request.headers.get("x-api-key");
   return apiKey === API_KEY;
 }
 
-// Send message to Telegram user
 async function sendTelegramMessage(
   chatId: string | number,
   text: string,
@@ -53,7 +50,6 @@ async function sendTelegramMessage(
   }
 }
 
-// Function to send a photo with a button
 async function sendTelegramPhotoWithButton(
   chatId: string | number,
   photoUrl: string,
@@ -85,7 +81,6 @@ async function sendTelegramPhotoWithButton(
 
   const data = await response.json();
   if (!data.ok) {
-    // This will be caught by the orchestrator
     throw new Error(`Ошибка Telegram API (sendPhoto with button): ${data.description}`);
   }
   return data;
@@ -99,17 +94,15 @@ async function sendTelegramPhotoWithButton(
  */
 async function sendCampaignJoinConfirmation(
   chatId: string | number,
-  campaignTitle: string, // CHANGED: Now accepts title instead of a pre-made message
+  campaignTitle: string,
   coverUrl: string | undefined,
   tmaUrl: string
 ) {
-  // The bot now creates the message. It's always clean and in Russian.
   const successMessage = `Поздравляем! Вы присоединились к кампании «${campaignTitle}»!`;
 
   // Fallback 1: Try to send Photo with Button
   if (coverUrl) {
     try {
-      // Use the clean message as the caption
       await sendTelegramPhotoWithButton(chatId, coverUrl, successMessage, tmaUrl);
       console.log("Успешно: отправлено фото с кнопкой.");
       return; // Success
@@ -130,17 +123,15 @@ async function sendCampaignJoinConfirmation(
         ],
       ],
     };
-    // Use the clean message as the text
     await sendTelegramMessage(chatId, successMessage, replyMarkup);
     console.log("Успешно: отправлено сообщение с кнопкой.");
-    return; // Success
+    return;
   } catch (error) {
     console.warn(`Не удалось отправить сообщение с кнопкой. Ошибка: ${(error as Error).message}. Переход к текстовому сообщению.`);
   }
 
   // Fallback 3: Send Plain Text Message
   try {
-    // ONLY in this final fallback do we add the URL to the text.
     const fallbackMessage = `${successMessage}\n\nНачать путешествие:\n${tmaUrl}`;
     await sendTelegramMessage(chatId, fallbackMessage);
     console.log("Успешно: отправлено простое текстовое сообщение.");
@@ -150,17 +141,16 @@ async function sendCampaignJoinConfirmation(
 }
 
 
-// MODIFIED: This function now expects the new API response and returns a structured object
 async function registerUserForCampaign(
   tgUser: any,
   activationCode: string
-): Promise<{ success: boolean; message: string; data?: any }> { // Return type is now an object
+): Promise<{ success: boolean; message: string; data?: any }> {
   try {
     const response = await fetch(`${API_URL}/api/bot/join-campaign`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": API_KEY!, // Use your internal API key for security
+        "x-api-key": API_KEY!,
       },
       body: JSON.stringify({
         tg_user: {
@@ -182,11 +172,10 @@ async function registerUserForCampaign(
       };
     }
 
-    // On success, return the full payload from the API
     return {
       success: true,
       message: data.message,
-      data: data.data, // This contains the URLs
+      data: data.data,
     };
   } catch (error) {
     console.error("Ошибка регистрации пользователя в кампании:", error);
@@ -197,7 +186,7 @@ async function registerUserForCampaign(
   }
 }
 
-// NEW: Function to call the backend and complete a QR mission
+
 async function completeQrMissionByCode(
   tgUser: any,
   completionCode: string
@@ -245,7 +234,6 @@ async function completeQrMissionByCode(
   }
 }
 
-// MODIFIED: Handle Telegram bot commands, now with deep link logic
 async function handleBotUpdate(update: any): Promise<void> {
   const message = update.message;
   if (!message?.text) return;
@@ -254,32 +242,26 @@ async function handleBotUpdate(update: any): Promise<void> {
   const text = message.text.trim();
   const user = message.from;
 
-  // Handle /start command with or without a payload
   if (text.startsWith("/start")) {
     const parts = text.split(" ");
     if (parts.length > 1 && parts[1].startsWith("join_")) {
       // This is a deep link for a campaign!
       const payload = parts[1];
-      const activationCode = payload.substring("join_".length); // Extracts the code
+      const activationCode = payload.substring("join_".length)
       
       console.log(`Попытка регистрации в кампании для пользователя ${user.id} с кодом: ${activationCode}`);
 
-      // Call the registration logic
       const result = await registerUserForCampaign(user, activationCode);
 
       try {
-        // Check for the data the bot needs to build the message
         if (result.success && result.data?.title && result.data?.campaign_tma_url) {
-          // SUCCESS: We have the data, so we can try sending rich messages
           await sendCampaignJoinConfirmation(
             chatId,
-            result.data.title, // PASS THE TITLE
+            result.data.title,
             result.data.campaign_cover_url,
             result.data.campaign_tma_url
           );
         } else {
-          // FAILURE or missing data: Send a simple text message with the error/message
-          // This is the ultimate fallback.
           await sendTelegramMessage(chatId, result.message);
         }
         console.log(
@@ -290,22 +272,18 @@ async function handleBotUpdate(update: any): Promise<void> {
       } catch (error) {
         console.error("Не удалось отправить ответ бота для присоединения к кампании:", error);
       }
-      return; // We've handled the response, so we exit.
+      return;
     } else if (parts.length > 1 && parts[1].startsWith("qr_")) {
       // This is a deep link for a QR mission!
       const payload = parts[1];
-      const completionCode = payload.substring("qr_".length); // Extracts the code
-
+      const completionCode = payload.substring("qr_".length);
       console.log(
         `Попытка выполнения QR-миссии для пользователя ${user.id} с кодом: ${completionCode}`
       );
 
-      // Call the completion logic
       const result = await completeQrMissionByCode(user, completionCode);
 
       try {
-        // If the operation failed, send the error message back to the user.
-        // On success, the backend API handles the notification, so we do nothing here.
         if (!result.success) {
           await sendTelegramMessage(chatId, result.message);
         }
@@ -320,11 +298,11 @@ async function handleBotUpdate(update: any): Promise<void> {
           error
         );
       }
-      return; // We've handled the response, so we exit.
+      return;
     }
   }
 
-  // Handle plain /start command
+  // plain /start command
   if (text === "/start") {
     const welcomeMessage = `Привет, ${
       user.first_name || "пользователь"
@@ -350,39 +328,12 @@ async function handleBotUpdate(update: any): Promise<void> {
     } catch (error) {
       console.error("Не удалось отправить ответ бота для /start:", error);
     }
-    return; // We've handled the response, so we exit.
+    return;
   }
 
-  // For all other commands, we prepare a text response and send it at the end.
-  let responseText = "Неизвестная команда. Введите /help для списка команд.";
-
-  if (text === "/help") {
-    responseText =
-      "Доступные команды:\n/start - Запустить бота\n/help - Показать это сообщение\n/ping - Проверить соединение с сервером";
-  } else if (text === "/ping") {
-    try {
-      const apiResponse = await fetch(`${API_URL}/api/bot/ping`, {
-        method: "GET",
-        headers: {
-          "x-api-key": API_KEY!,
-        },
-      });
-
-      if (apiResponse.ok) {
-        const data = await apiResponse.json();
-        responseText = `✅ Соединение с сервером в порядке.\nОтвет сервера: "${data.message}"`;
-      } else {
-        const errorData = await apiResponse.text();
-        responseText = `❌ Не удалось подключиться к серверу. Статус: ${apiResponse.status}\nДетали: ${errorData}`;
-      }
-    } catch (error) {
-      console.error("Ошибка при выполнении команды /ping:", error);
-      responseText = `❌ Произошла ошибка при попытке проверить соединение с сервером.`;
-    }
-  }
-
+  // If the command is not recognized, send a generic message.
   try {
-    await sendTelegramMessage(chatId, responseText);
+    await sendTelegramMessage(chatId, "Неизвестная команда.");
     console.log(
       `Бот ответил ${
         message.from.username || message.from.first_name
@@ -393,7 +344,6 @@ async function handleBotUpdate(update: any): Promise<void> {
   }
 }
 
-// Main serverless function
 export default {
   port: process.env.PORT || 3000,
 
@@ -402,7 +352,6 @@ export default {
     const method = request.method;
 
     try {
-      // Webhook endpoint for Telegram bot updates
       if (url.pathname === "/webhook" && method === "POST") {
         const update = await request.json();
         await handleBotUpdate(update);
@@ -410,9 +359,7 @@ export default {
         return new Response("OK", { status: 200 });
       }
 
-      // Send message endpoint (requires API key)
       if (url.pathname === "/send-message" && method === "POST") {
-        // Check API key
         if (!checkApiKey(request)) {
           return new Response(
             JSON.stringify({
@@ -459,7 +406,6 @@ export default {
         );
       }
 
-      // Health check endpoint
       if (url.pathname === "/health" && method === "GET") {
         return new Response(
           JSON.stringify({ status: "ok", timestamp: new Date().toISOString() }),
@@ -470,7 +416,6 @@ export default {
         );
       }
 
-      // 404 for other routes
       return new Response(
         JSON.stringify({ success: false, message: "Не найдено" }),
         {
