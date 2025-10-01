@@ -12,7 +12,6 @@ const API_KEY = process.env.API_KEY;
 const sendTelegramMessage = async (chatId, message) => {
     if (!BOT_URL || !API_KEY) {
         console.error('BOT_URL or API_KEY is not configured in environment variables. Cannot send Telegram message.');
-        // We don't throw here to avoid breaking the main flow, just log the error and return.
         return;
     }
 
@@ -32,7 +31,6 @@ const sendTelegramMessage = async (chatId, message) => {
     } catch (error) {
         const errorMsg = error.response ? JSON.stringify(error.response.data) : error.message;
         console.error(`Failed to send Telegram message to chat ID ${chatId}:`, errorMsg);
-        // Do not re-throw to prevent transaction rollback for a notification failure.
     }
 };
 
