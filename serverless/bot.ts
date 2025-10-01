@@ -331,35 +331,9 @@ async function handleBotUpdate(update: any): Promise<void> {
     return;
   }
 
-  let responseText = "Неизвестная команда. Введите /help для списка команд.";
-
-  if (text === "/help") {
-    responseText =
-      "Доступные команды:\n/start - Запустить бота\n/help - Показать это сообщение\n/ping - Проверить соединение с сервером";
-  } else if (text === "/ping") {
-    try {
-      const apiResponse = await fetch(`${API_URL}/api/bot/ping`, {
-        method: "GET",
-        headers: {
-          "x-api-key": API_KEY!,
-        },
-      });
-
-      if (apiResponse.ok) {
-        const data = await apiResponse.json();
-        responseText = `✅ Соединение с сервером в порядке.\nОтвет сервера: "${data.message}"`;
-      } else {
-        const errorData = await apiResponse.text();
-        responseText = `❌ Не удалось подключиться к серверу. Статус: ${apiResponse.status}\nДетали: ${errorData}`;
-      }
-    } catch (error) {
-      console.error("Ошибка при выполнении команды /ping:", error);
-      responseText = `❌ Произошла ошибка при попытке проверить соединение с сервером.`;
-    }
-  }
-
+  // If the command is not recognized, send a generic message.
   try {
-    await sendTelegramMessage(chatId, responseText);
+    await sendTelegramMessage(chatId, "Неизвестная команда.");
     console.log(
       `Бот ответил ${
         message.from.username || message.from.first_name
