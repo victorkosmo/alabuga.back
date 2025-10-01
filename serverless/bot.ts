@@ -53,36 +53,96 @@ async function sendTelegramMessage(
   }
 }
 
-// NEW: Function to send a photo with a caption
-async function sendTelegramPhoto(
+// Function to send a photo with a button
+async function sendTelegramPhotoWithButton(
   chatId: string | number,
   photoUrl: string,
-  caption: string
+  caption: string,
+  buttonUrl: string
 ): Promise<any> {
-  try {
-    const response = await fetch(
-      `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: chatId,
-          photo: photoUrl,
-          caption: caption,
-        }),
-      }
-    );
-
-    const data = await response.json();
-    if (!data.ok) {
-      throw new Error(`Ошибка Telegram API (sendPhoto): ${data.description}`);
+  const response = await fetch(
+    `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        photo: photoUrl,
+        caption: caption,
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "🚀 Открыть кампанию",
+                web_app: { url: buttonUrl },
+              },
+            ],
+          ],
+        },
+      }),
     }
-    return data;
+  );
+
+  const data = await response.json();
+  if (!data.ok) {
+    // This will be caught by the orchestrator
+    throw new Error(`Ошибка Telegram API (sendPhoto with button): ${data.description}`);
+  }
+  return data;
+}
+
+/**
+ * Sends a campaign join confirmation message with multiple fallbacks.
+ * 1. Tries to send a photo with a button.
+ * 2. If that fails, tries to send a text message with a button.
+ * 3. If that fails, sends a plain text message.
+ */
+async function sendCampaignJoinConfirmation(
+  chatId: string | number,
+  message: string, // The message from the API, which includes the URL for the final fallback
+  coverUrl: string | undefined,
+  tmaUrl: string
+) {
+  // Fallback 1: Try to send Photo with Button
+  if (coverUrl) {
+    try {
+      await sendTelegramPhotoWithButton(chatId, coverUrl, message, tmaUrl);
+      console.log("Успешно: отправлено фото с кнопкой.");
+      return; // Success
+    } catch (error) {
+      console.warn(`Не удалось отправить фото с кнопкой. Ошибка: ${(error as Error).message}. Переход к следующему варианту.`);
+    }
+  }
+
+  // Fallback 2: Try to send Text with Button
+  try {
+    const replyMarkup = {
+      inline_keyboard: [
+        [
+          {
+            text: "🚀 Открыть кампанию",
+            web_app: { url: tmaUrl },
+          },
+        ],
+      ],
+    };
+    await sendTelegramMessage(chatId, message, replyMarkup);
+    console.log("Успешно: отправлено сообщение с кнопкой.");
+    return; // Success
   } catch (error) {
-    console.error("Ошибка отправки фото в Telegram:", error);
-    throw error;
+    console.warn(`Не удалось отправить сообщение с кнопкой. Ошибка: ${(error as Error).message}. Переход к текстовому сообщению.`);
+  }
+
+  // Fallback 3: Send Plain Text Message
+  try {
+    // The `message` from the API already contains the full text and URL.
+    await sendTelegramMessage(chatId, message);
+    console.log("Успешно: отправлено простое текстовое сообщение.");
+  } catch (error) {
+    console.error("КРИТИЧЕСКАЯ ОШИБКА: Не удалось отправить даже текстовое подтверждение.", error);
   }
 }
+
 
 // MODIFIED: This function now expects the new API response and returns a structured object
 async function registerUserForCampaign(
@@ -202,15 +262,17 @@ async function handleBotUpdate(update: any): Promise<void> {
       const result = await registerUserForCampaign(user, activationCode);
 
       try {
-        if (result.success && result.data?.campaign_cover_url) {
-          // SUCCESS: Send the rich message with photo
-          await sendTelegramPhoto(
+        if (result.success && result.data?.campaign_tma_url) {
+          // SUCCESS: We have the URL, so we can try sending rich messages
+          await sendCampaignJoinConfirmation(
             chatId,
-            result.data.campaign_cover_url,
-            result.message
+            result.message, // The message from the API
+            result.data.campaign_cover_url, // can be undefined, handled inside
+            result.data.campaign_tma_url // is defined here
           );
         } else {
-          // FAILURE or missing data: Send a simple text message with the error/message
+          // FAILURE or missing TMA URL: Send a simple text message with the error/message
+          // This is the ultimate fallback.
           await sendTelegramMessage(chatId, result.message);
         }
         console.log(
