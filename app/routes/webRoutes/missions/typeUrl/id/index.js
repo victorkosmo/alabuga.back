@@ -7,10 +7,12 @@ const router = express.Router({ mergeParams: true });
 const getUrlMission = require('./get');
 const updateUrlMission = require('./update');
 const completionsRouter = require('./completions');
+const uploadUrlMissionCover = require('./uploadCover');
 
 // Define routes for /missions/type-url/:id
 router.get('/', getUrlMission);
 router.put('/', updateUrlMission);
+router.post('/cover', uploadUrlMissionCover);
 
 // Mount sub-router for completions
 router.use('/completions', completionsRouter);
