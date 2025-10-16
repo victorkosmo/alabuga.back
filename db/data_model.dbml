@@ -111,13 +111,22 @@ Table "ranks" {
 // Skills/competencies that users can develop
 Table "competencies" {
   "id" uuid [pk, not null, default: `gen_random_uuid()`]
-  "name" varchar(255) [unique, not null, note: 'Name of the competency, e.g., "Общение", "Аналитика".']
+  "name" varchar(255) [not null, note: 'Name of the competency, e.g., "Общение", "Аналитика".']
   "description" text [null]
+  "campaign_id" uuid [ref: > campaigns.id, null, note: 'NULL for global competencies, campaign ID for campaign-specific competencies.']
+  "is_global" boolean [not null, default: true, note: 'True for global competencies available across all campaigns, false for campaign-specific competencies.']
 
   // --- Timestamps ---
   "created_at" timestamp [not null, default: `now()`]
   "updated_at" timestamp [not null, default: `now()`]
   "deleted_at" timestamp [null]
+
+  Indexes {
+    (name) [unique, where: "is_global = true AND deleted_at IS NULL"]
+    (campaign_id, name) [unique, where: "is_global = false AND campaign_id IS NOT NULL AND deleted_at IS NULL"]
+    campaign_id
+    is_global
+  }
 }
 
 // Join table to track each user's progress in each competency
@@ -212,6 +221,7 @@ Table "missions" {
   "type" mission_type [not null, note: 'Defines the completion logic for the mission (e.g., QUIZ, MANUAL_URL).']
   "completion_code" varchar(50) [unique, null, note: 'Unique code for QR type missions.']
   "qr_url" text [null, note: 'Img URL for code in QR type missions.']
+  "cover_url" text [null, note: 'URL to the mission cover image displayed in the user interface.']
   "created_by" uuid [ref: > managers.id, not null, note: 'The manager who created this mission.']
   
   // --- Timestamps ---
