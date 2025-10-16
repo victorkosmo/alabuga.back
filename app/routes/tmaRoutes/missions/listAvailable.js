@@ -89,6 +89,11 @@ const pool = require('@db');
  *                                         type: string
  *                                         format: uri
  *                                         nullable: true
+ *                                       first_name:
+ *                                         type: string
+ *                                       last_name:
+ *                                         type: string
+ *                                         nullable: true
  *                 message:
  *                   type: string
  *                   example: "Available missions by campaign retrieved successfully."
@@ -125,6 +130,8 @@ const listAvailableMissions = async (req, res, next) => {
                     mc.mission_id,
                     u.id as user_id,
                     u.avatar_url,
+                    u.first_name,
+                    u.last_name,
                     ROW_NUMBER() OVER(PARTITION BY mc.mission_id ORDER BY (u.avatar_url IS NOT NULL) DESC, mc.created_at DESC) as rn
                 FROM mission_completions mc
                 JOIN users u ON mc.user_id = u.id
@@ -136,7 +143,12 @@ const listAvailableMissions = async (req, res, next) => {
                     COUNT(*) as total_completions,
                     COALESCE(
                         json_agg(
-                            json_build_object('id', user_id, 'avatar_url', avatar_url)
+                            json_build_object(
+                                'id', user_id,
+                                'avatar_url', avatar_url,
+                                'first_name', first_name,
+                                'last_name', last_name
+                            )
                         ) FILTER (WHERE rn <= 5),
                         '[]'::json
                     ) as completed_by
