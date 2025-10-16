@@ -6,17 +6,16 @@ const pool = require('@db');
  *   get:
  *     tags:
  *       - Missions (TMA)
- *     summary: List all available and locked missions for the user
+ *     summary: List available and locked missions grouped by campaign
  *     description: |
- *       Retrieves all missions for the authenticated user from all active campaigns they have joined.
- *       It separates missions into two lists: 'available_missions' (which the user can currently attempt)
- *       and 'locked_missions' (which are not yet accessible due to rank or achievement requirements).
- *       Completed missions are excluded from both lists.
+ *       Retrieves all non-completed missions for the authenticated user, grouped by the campaigns they have joined.
+ *       Campaigns are ordered by the most recently joined. Only campaigns with at least one non-completed mission are returned.
+ *       Each mission includes an `is_locked` flag indicating if it's accessible.
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: A list of available and locked missions.
+ *         description: A list of campaigns with their respective available and locked missions.
  *         content:
  *           application/json:
  *             schema:
@@ -25,19 +24,55 @@ const pool = require('@db');
  *                 success:
  *                   type: boolean
  *                 data:
- *                   type: object
- *                   properties:
- *                     available_missions:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/MissionTMA'
- *                     locked_missions:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/MissionTMA'
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       campaign_id:
+ *                         type: string
+ *                         format: uuid
+ *                       campaign_title:
+ *                         type: string
+ *                       campaign_cover_url:
+ *                         type: string
+ *                         format: uri
+ *                         nullable: true
+ *                       missions:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             id:
+ *                               type: string
+ *                               format: uuid
+ *                             title:
+ *                               type: string
+ *                             description:
+ *                               type: string
+ *                             category:
+ *                               type: string
+ *                             cover_url:
+ *                               type: string
+ *                               format: uri
+ *                               nullable: true
+ *                             experience_reward:
+ *                               type: integer
+ *                             mana_reward:
+ *                               type: integer
+ *                             type:
+ *                               type: string
+ *                             required_achievement_id:
+ *                               type: string
+ *                               format: uuid
+ *                               nullable: true
+ *                             required_achievement_name:
+ *                               type: string
+ *                               nullable: true
+ *                             is_locked:
+ *                               type: boolean
  *                 message:
  *                   type: string
- *                   example: "Available missions retrieved successfully."
+ *                   example: "Available missions by campaign retrieved successfully."
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  *       500:
@@ -56,68 +91,92 @@ const listAvailableMissions = async (req, res, next) => {
                 JOIN ranks r ON u.rank_id = r.id
                 WHERE u.id = $1
             ),
-            user_campaigns_active AS (
-                SELECT uc.campaign_id
+            user_campaigns_ordered AS (
+                SELECT
+                    uc.campaign_id,
+                    c.title as campaign_title,
+                    c.cover_url as campaign_cover_url,
+                    uc.joined_at
                 FROM user_campaigns uc
                 JOIN campaigns c ON uc.campaign_id = c.id
                 WHERE uc.user_id = $1 AND c.status = 'ACTIVE' AND c.deleted_at IS NULL
+            ),
+            campaign_missions AS (
+                SELECT
+                    m.campaign_id,
+                    m.id,
+                    m.title,
+                    m.description,
+                    m.category,
+                    m.cover_url,
+                    m.experience_reward,
+                    m.mana_reward,
+                    m.type,
+                    m.required_achievement_id,
+                    ach.name as required_achievement_name,
+                    r_req.sequence_order as required_rank_order,
+                    CASE
+                        WHEN r_req.sequence_order > (SELECT user_rank_order FROM user_info) THEN true
+                        WHEN m.required_achievement_id IS NOT NULL AND ua.user_id IS NULL THEN true
+                        ELSE false
+                    END as is_locked
+                FROM
+                    missions m
+                JOIN
+                    ranks r_req ON m.required_rank_id = r_req.id
+                LEFT JOIN
+                    achievements ach ON m.required_achievement_id = ach.id
+                LEFT JOIN
+                    user_achievements ua ON m.required_achievement_id = ua.achievement_id AND ua.user_id = $1
+                WHERE
+                    m.campaign_id IN (SELECT campaign_id FROM user_campaigns_ordered)
+                    AND m.deleted_at IS NULL
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM mission_completions mc
+                        WHERE mc.mission_id = m.id AND mc.user_id = $1 AND mc.status = 'APPROVED'
+                    )
             )
             SELECT
-                m.id,
-                m.title,
-                m.description,
-                m.category,
-                m.cover_url,
-                m.experience_reward,
-                m.mana_reward,
-                m.type,
-                m.required_achievement_id,
-                c.id as campaign_id,
-                c.title as campaign_title,
-                ach.name as required_achievement_name,
-                CASE
-                    WHEN r_req.sequence_order > (SELECT user_rank_order FROM user_info) THEN true
-                    WHEN m.required_achievement_id IS NOT NULL AND ua.user_id IS NULL THEN true
-                    ELSE false
-                END as is_locked
+                uco.campaign_id,
+                uco.campaign_title,
+                uco.campaign_cover_url,
+                COALESCE(
+                    (
+                        SELECT json_agg(
+                            json_build_object(
+                                'id', cm.id,
+                                'title', cm.title,
+                                'description', cm.description,
+                                'category', cm.category,
+                                'cover_url', cm.cover_url,
+                                'experience_reward', cm.experience_reward,
+                                'mana_reward', cm.mana_reward,
+                                'type', cm.type,
+                                'required_achievement_id', cm.required_achievement_id,
+                                'required_achievement_name', cm.required_achievement_name,
+                                'is_locked', cm.is_locked
+                            )
+                            ORDER BY cm.is_locked ASC, cm.required_rank_order ASC, cm.id ASC
+                        )
+                        FROM campaign_missions cm
+                        WHERE cm.campaign_id = uco.campaign_id
+                    ),
+                    '[]'::json
+                ) as missions
             FROM
-                missions m
-            JOIN
-                campaigns c ON m.campaign_id = c.id
-            JOIN
-                ranks r_req ON m.required_rank_id = r_req.id
-            LEFT JOIN
-                achievements ach ON m.required_achievement_id = ach.id
-            LEFT JOIN
-                user_achievements ua ON m.required_achievement_id = ua.achievement_id AND ua.user_id = $1
-            WHERE
-                m.campaign_id IN (SELECT campaign_id FROM user_campaigns_active)
-                AND m.deleted_at IS NULL
-                AND NOT EXISTS (
-                    SELECT 1
-                    FROM mission_completions mc
-                    WHERE mc.mission_id = m.id AND mc.user_id = $1 AND mc.status = 'APPROVED'
-                )
+                user_campaigns_ordered uco
+            WHERE EXISTS (
+                SELECT 1 FROM campaign_missions cm WHERE cm.campaign_id = uco.campaign_id
+            )
             ORDER BY
-                is_locked ASC, c.title ASC, r_req.sequence_order ASC, m.created_at ASC;
+                uco.joined_at DESC;
         `;
 
         const { rows } = await pool.query(query, [userId]);
 
-        const available_missions = [];
-        const locked_missions = [];
-
-        rows.forEach(mission => {
-            const { is_locked, ...missionData } = mission;
-            if (is_locked) {
-                locked_missions.push(missionData);
-            } else {
-                available_missions.push(missionData);
-            }
-        });
-
-        res.locals.data = { available_missions, locked_missions };
-        res.locals.message = 'Available missions retrieved successfully.';
+        res.locals.data = rows;
+        res.locals.message = 'Available missions by campaign retrieved successfully.';
         next();
     } catch (err) {
         next(err);
