@@ -34,6 +34,9 @@ const { isUUID } = require('validator');
  *                 nullable: true
  *               category:
  *                 type: string
+ *               cover_url:
+ *                 type: string
+ *                 nullable: true
  *               required_achievement_id:
  *                 type: string
  *                 format: uuid
@@ -90,7 +93,7 @@ const updateQrMission = async (req, res, next) => {
         return next(err);
     }
 
-    const missionFields = ['title', 'description', 'category', 'required_achievement_id', 'experience_reward', 'mana_reward'];
+    const missionFields = ['title', 'description', 'category', 'required_achievement_id', 'experience_reward', 'mana_reward', 'cover_url'];
     const missionUpdates = {};
 
     for (const key in body) {

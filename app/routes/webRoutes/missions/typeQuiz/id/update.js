@@ -64,6 +64,9 @@ const validateQuestions = (questions) => {
  *                 nullable: true
  *               category:
  *                 type: string
+ *               cover_url:
+ *                 type: string
+ *                 nullable: true
  *               required_achievement_id:
  *                 type: string
  *                 format: uuid
@@ -133,7 +136,7 @@ const updateQuizMission = async (req, res, next) => {
         }
     }
 
-    const missionFields = ['title', 'description', 'category', 'required_achievement_id', 'experience_reward', 'mana_reward'];
+    const missionFields = ['title', 'description', 'category', 'required_achievement_id', 'experience_reward', 'mana_reward', 'cover_url'];
     const detailFields = ['questions', 'pass_threshold'];
 
     const missionUpdates = {};
