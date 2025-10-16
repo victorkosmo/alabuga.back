@@ -70,6 +70,25 @@ const pool = require('@db');
  *                               nullable: true
  *                             is_locked:
  *                               type: boolean
+ *                             completion_stats:
+ *                               type: object
+ *                               properties:
+ *                                 total_completions:
+ *                                   type: integer
+ *                                   description: Total number of users who have completed this mission.
+ *                                 completed_by:
+ *                                   type: array
+ *                                   description: A list of up to 5 users who have completed the mission, prioritized by avatar availability.
+ *                                   items:
+ *                                     type: object
+ *                                     properties:
+ *                                       id:
+ *                                         type: string
+ *                                         format: uuid
+ *                                       avatar_url:
+ *                                         type: string
+ *                                         format: uri
+ *                                         nullable: true
  *                 message:
  *                   type: string
  *                   example: "Available missions by campaign retrieved successfully."
@@ -101,6 +120,29 @@ const listAvailableMissions = async (req, res, next) => {
                 JOIN campaigns c ON uc.campaign_id = c.id
                 WHERE uc.user_id = $1 AND c.status = 'ACTIVE' AND c.deleted_at IS NULL
             ),
+            mission_completers_ranked AS (
+                SELECT
+                    mc.mission_id,
+                    u.id as user_id,
+                    u.avatar_url,
+                    ROW_NUMBER() OVER(PARTITION BY mc.mission_id ORDER BY (u.avatar_url IS NOT NULL) DESC, mc.created_at DESC) as rn
+                FROM mission_completions mc
+                JOIN users u ON mc.user_id = u.id
+                WHERE mc.status = 'APPROVED' AND u.deleted_at IS NULL
+            ),
+            mission_completion_stats AS (
+                SELECT
+                    mission_id,
+                    COUNT(*) as total_completions,
+                    COALESCE(
+                        json_agg(
+                            json_build_object('id', user_id, 'avatar_url', avatar_url)
+                        ) FILTER (WHERE rn <= 5),
+                        '[]'::json
+                    ) as completed_by
+                FROM mission_completers_ranked
+                GROUP BY mission_id
+            ),
             campaign_missions AS (
                 SELECT
                     m.campaign_id,
@@ -115,6 +157,8 @@ const listAvailableMissions = async (req, res, next) => {
                     m.required_achievement_id,
                     ach.name as required_achievement_name,
                     r_req.sequence_order as required_rank_order,
+                    COALESCE(mcs.total_completions, 0)::INTEGER as total_completions,
+                    COALESCE(mcs.completed_by, '[]'::json) as completed_by,
                     CASE
                         WHEN r_req.sequence_order > (SELECT user_rank_order FROM user_info) THEN true
                         WHEN m.required_achievement_id IS NOT NULL AND ua.user_id IS NULL THEN true
@@ -128,6 +172,8 @@ const listAvailableMissions = async (req, res, next) => {
                     achievements ach ON m.required_achievement_id = ach.id
                 LEFT JOIN
                     user_achievements ua ON m.required_achievement_id = ua.achievement_id AND ua.user_id = $1
+                LEFT JOIN
+                    mission_completion_stats mcs ON m.id = mcs.mission_id
                 WHERE
                     m.campaign_id IN (SELECT campaign_id FROM user_campaigns_ordered)
                     AND m.deleted_at IS NULL
@@ -155,7 +201,11 @@ const listAvailableMissions = async (req, res, next) => {
                                 'type', cm.type,
                                 'required_achievement_id', cm.required_achievement_id,
                                 'required_achievement_name', cm.required_achievement_name,
-                                'is_locked', cm.is_locked
+                                'is_locked', cm.is_locked,
+                                'completion_stats', json_build_object(
+                                    'total_completions', cm.total_completions,
+                                    'completed_by', cm.completed_by
+                                )
                             )
                             ORDER BY cm.is_locked ASC, cm.required_rank_order ASC, cm.id ASC
                         )
