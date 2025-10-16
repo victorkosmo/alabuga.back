@@ -45,6 +45,11 @@ const { isUUID } = require('validator');
  *                         type: string
  *                       category:
  *                         type: string
+ *                       cover_url:
+ *                         type: string
+ *                         format: uri
+ *                         nullable: true
+ *                         description: URL to the mission cover image.
  *                       experience_reward:
  *                         type: integer
  *                       mana_reward:
@@ -130,6 +135,7 @@ const listCampaignMissions = async (req, res, next) => {
                 m.title,
                 m.description,
                 m.category,
+                m.cover_url,
                 m.experience_reward,
                 m.mana_reward,
                 m.type,

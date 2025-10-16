@@ -67,6 +67,7 @@ const listAvailableMissions = async (req, res, next) => {
                 m.title,
                 m.description,
                 m.category,
+                m.cover_url,
                 m.experience_reward,
                 m.mana_reward,
                 m.type,
