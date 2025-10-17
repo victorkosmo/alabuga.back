@@ -35,7 +35,53 @@ const { isUUID } = require('validator');
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/MissionDetailedTMA'
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                   format: uuid
+ *                 title:
+ *                   type: string
+ *                 description:
+ *                   type: string
+ *                   nullable: true
+ *                 category:
+ *                   type: string
+ *                 cover_url:
+ *                   type: string
+ *                   format: uri
+ *                   nullable: true
+ *                   description: URL to the mission cover image.
+ *                 campaign_icon_url:
+ *                   type: string
+ *                   format: uri
+ *                   nullable: true
+ *                   description: URL to the campaign icon image.
+ *                 experience_reward:
+ *                   type: integer
+ *                 mana_reward:
+ *                   type: integer
+ *                 competency_rewards:
+ *                   type: object
+ *                   nullable: true
+ *                 required_achievement_id:
+ *                   type: string
+ *                   format: uuid
+ *                   nullable: true
+ *                 required_achievement_name:
+ *                   type: string
+ *                   nullable: true
+ *                 type:
+ *                   type: string
+ *                   enum: [MANUAL_URL, QUIZ, QR_CODE, AI_CHECK]
+ *                 is_completed:
+ *                   type: boolean
+ *                 is_locked:
+ *                   type: boolean
+ *                 details:
+ *                   type: object
+ *                   nullable: true
+ *                   description: Mission-type-specific details.
  *       400:
  *         description: Invalid ID format for campaign or mission.
  *       401:
@@ -64,6 +110,8 @@ const getMissionById = async (req, res, next) => {
             )
             SELECT
                 m.id, m.title, m.description, m.category, m.experience_reward, m.mana_reward, m.competency_rewards, m.type, m.required_achievement_id,
+                m.cover_url,
+                c.icon_url as campaign_icon_url,
                 ach.name as required_achievement_name,
                 CASE WHEN mc.id IS NOT NULL THEN true ELSE false END as is_completed,
                 CASE
@@ -73,6 +121,7 @@ const getMissionById = async (req, res, next) => {
                 mmd.submission_prompt, mmd.placeholder_text,
                 mqd.questions, mqd.pass_threshold
             FROM missions m
+            JOIN campaigns c ON m.campaign_id = c.id
             LEFT JOIN mission_completions mc ON m.id = mc.mission_id AND mc.user_id = $1 AND mc.status = 'APPROVED'
             LEFT JOIN mission_manual_details mmd ON m.id = mmd.mission_id AND m.type = 'MANUAL_URL'
             LEFT JOIN mission_quiz_details mqd ON m.id = mqd.mission_id AND m.type = 'QUIZ'
@@ -85,7 +134,7 @@ const getMissionById = async (req, res, next) => {
                 AND EXISTS (SELECT 1 FROM campaign_check);
         `;
 
-        const { rows } = await pool.query(query, [userId, missionId, campaignId]);
+        const { rows } = await pool.query(query, [userId, campaignId]);
 
         if (rows.length === 0) {
             const err = new Error('Mission not found or you are not a participant of this campaign.');
@@ -100,6 +149,8 @@ const getMissionById = async (req, res, next) => {
             title: missionData.title,
             description: missionData.description,
             category: missionData.category,
+            cover_url: missionData.cover_url,
+            campaign_icon_url: missionData.campaign_icon_url,
             experience_reward: missionData.experience_reward,
             mana_reward: missionData.mana_reward,
             competency_rewards: missionData.competency_rewards,
