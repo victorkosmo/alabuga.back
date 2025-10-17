@@ -75,9 +75,9 @@ const submitUrlMission = async (req, res, next) => {
         // 1. Fetch mission, user rank, and campaign participation in one go
         const validationQuery = `
             WITH mission_details AS (
-                SELECT m.id, m.campaign_id, m.type, r.priority as required_rank
+                SELECT m.id, m.campaign_id, m.type, COALESCE(r.priority, -1) as required_rank
                 FROM missions m
-                JOIN ranks r ON m.required_rank_id = r.id
+                LEFT JOIN ranks r ON m.required_rank_id = r.id
                 WHERE m.id = $1 AND m.deleted_at IS NULL
             ),
             user_details AS (
@@ -131,7 +131,8 @@ const submitUrlMission = async (req, res, next) => {
             return next(err);
         }
 
-        if (check.user_current_rank < check.required_rank) {
+        // Check if required_rank is set (not -1) and user's rank is lower
+        if (check.required_rank > -1 && check.user_current_rank < check.required_rank) {
             const err = new Error('Your rank is too low to submit this mission.');
             err.statusCode = 400;
             err.code = 'RANK_INSUFFICIENT';

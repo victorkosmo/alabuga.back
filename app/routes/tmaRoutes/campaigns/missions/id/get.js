@@ -75,7 +75,7 @@ const getMissionById = async (req, res, next) => {
                 ach.name as required_achievement_name,
                 CASE WHEN mc.id IS NOT NULL THEN true ELSE false END as is_completed,
                 CASE
-                    WHEN COALESCE(r_req.priority, -1) > (SELECT user_rank_priority FROM user_data) AND r_req.id IS NOT NULL THEN true
+                    WHEN r_req.id IS NOT NULL AND COALESCE(r_req.priority, -1) > (SELECT user_rank_priority FROM user_data) THEN true
                     WHEN m.required_achievement_id IS NOT NULL AND ua.user_id IS NULL THEN true
                     ELSE false
                 END as is_locked,

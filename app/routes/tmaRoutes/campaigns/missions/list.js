@@ -141,13 +141,13 @@ const listCampaignMissions = async (req, res, next) => {
                 ach.name as required_achievement_name,
                 mc.status as submission_status,
                 CASE
-                    WHEN r_req.priority > (SELECT priority FROM user_rank) THEN true
+                    WHEN r_req.id IS NOT NULL AND r_req.priority > (SELECT priority FROM user_rank) THEN true
                     WHEN m.required_achievement_id IS NOT NULL AND ua.user_id IS NULL THEN true
                     ELSE false
                 END as is_locked
             FROM
                 missions m
-            JOIN
+            LEFT JOIN
                 ranks r_req ON m.required_rank_id = r_req.id
             LEFT JOIN
                 latest_completions mc ON m.id = mc.mission_id AND mc.rn = 1
@@ -160,7 +160,7 @@ const listCampaignMissions = async (req, res, next) => {
                 AND m.deleted_at IS NULL
                 AND (mc.status IS NULL OR mc.status != 'APPROVED')
             ORDER BY
-                is_locked ASC, r_req.priority ASC, m.created_at ASC;
+                is_locked ASC, COALESCE(r_req.priority, 9999) ASC, m.created_at ASC;
         `;
 
         const { rows } = await pool.query(missionsQuery, [userId, campaignId]);
