@@ -88,16 +88,16 @@ const completeQrMission = async (req, res, next) => {
         if (userRows.length > 0) {
             user = userRows[0];
         } else {
-            const defaultRankQuery = 'SELECT id FROM ranks WHERE sequence_order = (SELECT MIN(sequence_order) FROM ranks WHERE deleted_at IS NULL) AND deleted_at IS NULL LIMIT 1';
+            const defaultRankQuery = 'SELECT id FROM ranks WHERE deleted_at IS NULL ORDER BY priority ASC LIMIT 1';
             const { rows: rankRows } = await client.query(defaultRankQuery);
-            if (rankRows.length === 0) {
-                throw new Error('Initial rank not configured. Cannot create new user.');
-            }
+            
+            const defaultRankId = rankRows.length > 0 ? rankRows[0].id : null;
+
             const insertUserQuery = `
                 INSERT INTO users (tg_id, username, first_name, last_name, rank_id)
                 VALUES ($1, $2, $3, $4, $5) RETURNING id`;
             const { rows: newUserRows } = await client.query(insertUserQuery, [
-                tg_user.id, tg_user.username, tg_user.first_name, tg_user.last_name, rankRows[0].id
+                tg_user.id, tg_user.username, tg_user.first_name, tg_user.last_name, defaultRankId
             ]);
             user = newUserRows[0];
         }

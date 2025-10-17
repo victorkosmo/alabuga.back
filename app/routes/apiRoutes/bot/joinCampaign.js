@@ -86,18 +86,11 @@ const joinCampaignByCode = async (req, res, next) => {
         if (userRows.length > 0) {
             user = userRows[0];
         } else {
-            // Find the default rank (the one with the lowest sequence_order)
-            const defaultRankQuery = 'SELECT id FROM ranks WHERE sequence_order = (SELECT MIN(sequence_order) FROM ranks WHERE deleted_at IS NULL) AND deleted_at IS NULL LIMIT 1';
+            // Find the default rank (the one with the lowest priority)
+            const defaultRankQuery = 'SELECT id FROM ranks WHERE deleted_at IS NULL ORDER BY priority ASC LIMIT 1';
             const { rows: rankRows } = await client.query(defaultRankQuery);
 
-            if (rankRows.length === 0) {
-                const err = new Error('Initial rank not configured in the system. Cannot create new user.');
-                err.statusCode = 500;
-                err.code = 'NO_INITIAL_RANK';
-                await client.query('ROLLBACK');
-                return next(err);
-            }
-            const defaultRankId = rankRows[0].id;
+            const defaultRankId = rankRows.length > 0 ? rankRows[0].id : null;
 
             const insertUserQuery = `
                 INSERT INTO users (tg_id, username, first_name, last_name, rank_id)
@@ -109,7 +102,7 @@ const joinCampaignByCode = async (req, res, next) => {
                 tg_user.username,
                 tg_user.first_name,
                 tg_user.last_name,
-                defaultRankId
+                defaultRankId,
             ]);
             user = newUserRows[0];
         }
