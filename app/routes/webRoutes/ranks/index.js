@@ -35,14 +35,6 @@ router.use(authenticateJWT);
  *           type: object
  *           description: JSON object with conditions to unlock this rank.
  *           example: {"required_experience": 500, "required_missions": ["uuid1", "uuid2"]}
- *         is_global:
- *           type: boolean
- *           description: Whether the rank is global or campaign-specific.
- *         campaign_id:
- *           type: string
- *           format: uuid
- *           nullable: true
- *           description: The campaign this rank belongs to if it's not global.
  *         created_at:
  *           type: string
  *           format: date-time
