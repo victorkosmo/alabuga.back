@@ -65,7 +65,7 @@ Table "users" {
   "avatar_url" text [null, note: 'URL to the user profile picture.']
 
   // --- Game-related Fields ---
-  "rank_id" uuid [ref: > ranks.id, not null, note: 'Current rank of the user.']
+  "rank_id" uuid [ref: > ranks.id, null, note: 'Current rank of the user.']
   "experience_points" integer [not null, default: 0, note: 'Experience points (Опыт) for ranking up.']
   "mana_points" integer [not null, default: 0, note: 'Currency (Мана) to spend in the store.']
 
@@ -98,14 +98,18 @@ Table "managers" {
 // Game ranks and the conditions to achieve them
 Table "ranks" {
   "id" uuid [pk, not null, default: `gen_random_uuid()`]
-  "title" varchar(255) [unique, not null, note: 'Name of the rank, e.g., "Искатель", "Пилот-кандидат".']
-  "sequence_order" integer [unique, not null, note: 'Defines the linear progression of ranks.']
-  "unlock_conditions" jsonb [not null, note: 'JSON object with conditions to unlock this rank. E.g., {"required_experience": 500, "required_missions": ["uuid1", "uuid2"], "required_competencies": [{"id": "uuid", "level": 1}] }']
+  "title" varchar(255) [unique, not null, note: 'Display name of the Title/Specialization, e.g., "Пилот-испытатель", "Ветеран двух сезонов"']
+  "description" text [null, note: 'Detailed description of what this title represents and how it is earned']
+  "image_url" text [null, note: 'URL to the title badge/icon image displayed in the user interface']
+  "priority" integer [not null, default: 0, note: 'Priority level for display. If a user qualifies for multiple titles, the one with the highest priority is shown.']
+  "unlock_conditions" jsonb [not null, note: 'JSON object describing the conditions to earn this title. Example: {"required_achievements": {"operator": "AND", "ids": ["ach_uuid_1", "ach_uuid_2"]}, "required_competencies": [{"id": "comp_uuid_1", "level": 3}]}']
   
   // --- Timestamps ---
   "created_at" timestamp [not null, default: `now()`]
   "updated_at" timestamp [not null, default: `now()`]
   "deleted_at" timestamp [null]
+
+  note: 'Stores dynamic Titles/Specializations that users can earn. The user is assigned the title with the highest priority for which they meet the conditions.'
 }
 
 // Skills/competencies that users can develop
@@ -155,6 +159,7 @@ Table "campaigns" {
   "metadata" jsonb [null, note: 'Additional campaign-specific settings and configuration data.']
   "qr_url" text [null, note: 'Img URL for QR code']
   "cover_url" text [null, note: 'Img URL for campaign cover']
+  "icon_url" text [null, note: 'URL to the campaign icon/logo image for visual identification']
   "created_at" timestamp [not null, default: `now()`, note: 'Timestamp when the campaign was created.']
   "updated_at" timestamp [not null, default: `now()`]
   "deleted_at" timestamp [null, note: 'Timestamp for soft deletion of campaigns.']
@@ -208,7 +213,7 @@ Table "missions" {
   "title" varchar(255) [not null]
   "description" text [null]
   "category" varchar(100) [not null, note: 'Category for mission branching, e.g., "Квесты", "Рекрутинг".']
-  "required_rank_id" uuid [ref: > ranks.id, not null, note: 'The minimum rank required to access this mission.']
+  "required_rank_id" uuid [ref: > ranks.id, null, note: '[DEPRECATED] Access is now controlled by required_achievement_id. This field is kept for potential future use or legacy data but is not actively used for locking missions.']
   "required_achievement_id" uuid [ref: > achievements.id, null, note: 'Optional achievement that must be earned before this mission becomes available. Must be from the same campaign.']
   
   // --- Rewards & Effects ---
