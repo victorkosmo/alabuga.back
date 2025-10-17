@@ -8,7 +8,7 @@ const pool = require('@db');
  *     tags:
  *       - Ranks
  *     summary: List all ranks in a minimal format
- *     description: Retrieves a non-paginated list of all ranks with only their ID and title, ordered by sequence. This is useful for populating dropdowns in a UI. Requires authentication.
+ *     description: Retrieves a non-paginated list of all ranks with only their ID and title, ordered by priority. This is useful for populating dropdowns in a UI. Requires authentication.
  *     security:
  *       - bearerAuth: []
  *     responses:

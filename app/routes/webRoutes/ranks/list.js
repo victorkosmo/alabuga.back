@@ -8,7 +8,7 @@ const pool = require('@db');
  *     tags:
  *       - Ranks
  *     summary: List all ranks
- *     description: Retrieve a paginated list of all ranks, ordered by their sequence. Requires authentication.
+ *     description: Retrieve a paginated list of all ranks, ordered by their priority. Requires authentication.
  *     security:
  *       - bearerAuth: []
  *     parameters:
