@@ -85,6 +85,7 @@ const listCampaigns = async (req, res, next) => {
                 c.metadata,
                 c.qr_url,
                 c.cover_url,
+                c.icon_url,
                 c.created_at,
                 c.updated_at,
                 json_build_object(
