@@ -1,5 +1,6 @@
 // app/routes/webRoutes/ranks/listMinimal.js
 const pool = require('@db');
+const { isUUID } = require('validator');
 
 /**
  * @swagger
@@ -8,9 +9,16 @@ const pool = require('@db');
  *     tags:
  *       - Ranks
  *     summary: List all ranks in a minimal format
- *     description: Retrieves a non-paginated list of all ranks with only their ID and title, ordered by priority. This is useful for populating dropdowns in a UI. Requires authentication.
+ *     description: Retrieves a non-paginated list of all ranks with only their ID and title, ordered by priority. This is useful for populating dropdowns in a UI. Can be filtered by campaign. Requires authentication.
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: campaign_id
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Optional campaign ID to filter ranks. Returns ranks for that campaign plus global ranks. If not provided, returns only global ranks.
  *     responses:
  *       200:
  *         description: A minimal list of ranks.
@@ -42,9 +50,28 @@ const pool = require('@db');
  */
 const listMinimalRanks = async (req, res, next) => {
     try {
-        const { rows } = await pool.query(
-            'SELECT id, title FROM ranks WHERE deleted_at IS NULL ORDER BY priority ASC'
-        );
+        const { campaign_id: campaignId } = req.query;
+
+        if (campaignId && !isUUID(campaignId)) {
+            const err = new Error('If provided, campaign_id must be a valid UUID.');
+            err.statusCode = 400;
+            err.code = 'INVALID_QUERY_PARAM';
+            return next(err);
+        }
+
+        const queryParams = [];
+        let whereClause = 'WHERE deleted_at IS NULL';
+
+        if (campaignId) {
+            whereClause += ' AND (is_global = true OR campaign_id = $1)';
+            queryParams.push(campaignId);
+        } else {
+            whereClause += ' AND is_global = true';
+        }
+
+        const query = `SELECT id, title FROM ranks ${whereClause} ORDER BY priority ASC`;
+
+        const { rows } = await pool.query(query, queryParams);
 
         res.locals.data = rows;
         res.locals.message = 'Minimal rank list retrieved successfully.';
