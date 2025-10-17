@@ -69,7 +69,22 @@ const getQuizMission = async (req, res, next) => {
 
         const query = `
             SELECT
-                m.*,
+                m.id,
+                m.campaign_id,
+                m.title,
+                m.description,
+                m.category,
+                m.required_rank_id,
+                m.required_achievement_id,
+                m.experience_reward,
+                m.mana_reward,
+                m.competency_rewards,
+                m.awarded_artifact_id,
+                m.cover_url,
+                m.type,
+                m.created_by,
+                m.created_at,
+                m.updated_at,
                 mqd.questions,
                 mqd.pass_threshold,
                 a.name AS required_achievement_name

@@ -7,10 +7,11 @@ const { isUUID } = require('validator');
  *   get:
  *     tags:
  *       - Campaigns (TMA)
- *     summary: List available missions for a campaign
+ *     summary: List available and locked missions for a campaign
  *     description: |
- *       Retrieves a list of missions for a specific campaign, tailored for the authenticated user.
- *       It includes flags indicating if a mission is completed by the user or locked due to rank requirements.
+ *       Retrieves a list of available and locked missions for a specific campaign, tailored for the authenticated user.
+ *       Completed missions are not included in the list.
+ *       It includes a flag indicating if a mission is locked due to rank or achievement requirements.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -45,6 +46,11 @@ const { isUUID } = require('validator');
  *                         type: string
  *                       category:
  *                         type: string
+ *                       cover_url:
+ *                         type: string
+ *                         format: uri
+ *                         nullable: true
+ *                         description: URL to the mission cover image.
  *                       experience_reward:
  *                         type: integer
  *                       mana_reward:
@@ -61,9 +67,6 @@ const { isUUID } = require('validator');
  *                         type: string
  *                         nullable: true
  *                         description: The name of the achievement required to unlock this mission.
- *                       is_completed:
- *                         type: boolean
- *                         description: True if the user has successfully completed this mission.
  *                       submission_status:
  *                         type: string
  *                         enum: [PENDING_REVIEW, APPROVED, REJECTED]
@@ -130,15 +133,12 @@ const listCampaignMissions = async (req, res, next) => {
                 m.title,
                 m.description,
                 m.category,
+                m.cover_url,
                 m.experience_reward,
                 m.mana_reward,
                 m.type,
                 m.required_achievement_id,
                 ach.name as required_achievement_name,
-                CASE
-                    WHEN mc.status = 'APPROVED' THEN true
-                    ELSE false
-                END as is_completed,
                 mc.status as submission_status,
                 CASE
                     WHEN r_req.sequence_order > (SELECT sequence_order FROM user_rank) THEN true
@@ -158,8 +158,9 @@ const listCampaignMissions = async (req, res, next) => {
             WHERE
                 m.campaign_id = $2
                 AND m.deleted_at IS NULL
+                AND (mc.status IS NULL OR mc.status != 'APPROVED')
             ORDER BY
-                r_req.sequence_order ASC, m.created_at ASC;
+                is_locked ASC, r_req.sequence_order ASC, m.created_at ASC;
         `;
 
         const { rows } = await pool.query(missionsQuery, [userId, campaignId]);
