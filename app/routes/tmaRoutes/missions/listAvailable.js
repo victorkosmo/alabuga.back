@@ -41,6 +41,46 @@ const pool = require('@db');
  *                         type: string
  *                         format: uri
  *                         nullable: true
+ *                       achievements:
+ *                         type: array
+ *                         description: "List of achievements available in this campaign."
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             id:
+ *                               type: string
+ *                               format: uuid
+ *                             name:
+ *                               type: string
+ *                             description:
+ *                               type: string
+ *                               nullable: true
+ *                             image_url:
+ *                               type: string
+ *                               format: uri
+ *                               nullable: true
+ *                             experience_reward:
+ *                               type: integer
+ *                             mana_reward:
+ *                               type: integer
+ *                             is_earned:
+ *                               type: boolean
+ *                               description: "Whether the user has earned this achievement."
+ *                             awarded_at:
+ *                               type: string
+ *                               format: date-time
+ *                               nullable: true
+ *                             required_missions:
+ *                               type: array
+ *                               description: "List of missions required to unlock this achievement."
+ *                               items:
+ *                                 type: object
+ *                                 properties:
+ *                                   id:
+ *                                     type: string
+ *                                     format: uuid
+ *                                   title:
+ *                                     type: string
  *                       missions:
  *                         type: array
  *                         items:
@@ -139,6 +179,38 @@ const listAvailableMissions = async (req, res, next) => {
                 JOIN campaigns c ON uc.campaign_id = c.id
                 WHERE uc.user_id = $1 AND c.status = 'ACTIVE' AND c.deleted_at IS NULL
             ),
+            campaign_achievements AS (
+                SELECT
+                    a.campaign_id,
+                    a.created_at,
+                    json_build_object(
+                        'id', a.id,
+                        'name', a.name,
+                        'description', a.description,
+                        'image_url', a.image_url,
+                        'experience_reward', a.experience_reward,
+                        'mana_reward', a.mana_reward,
+                        'is_earned', CASE WHEN ua.user_id IS NOT NULL THEN true ELSE false END,
+                        'awarded_at', ua.awarded_at,
+                        'required_missions', COALESCE(
+                            (
+                                SELECT json_agg(json_build_object('id', m.id, 'title', m.title))
+                                FROM missions m
+                                WHERE m.deleted_at IS NULL AND m.id IN (
+                                    SELECT (value::uuid)
+                                    FROM jsonb_array_elements_text(a.unlock_conditions -> 'required_missions')
+                                )
+                            ),
+                            '[]'::json
+                        )
+                    ) as achievement_object
+                FROM
+                    achievements a
+                LEFT JOIN
+                    user_achievements ua ON a.id = ua.achievement_id AND ua.user_id = $1
+                WHERE
+                    a.campaign_id IN (SELECT campaign_id FROM user_campaigns_ordered)
+            ),
             latest_user_completions AS (
                 SELECT
                     mission_id,
@@ -226,6 +298,14 @@ const listAvailableMissions = async (req, res, next) => {
                 uco.campaign_title,
                 uco.campaign_cover_url,
                 uco.campaign_icon_url,
+                COALESCE(
+                    (
+                        SELECT json_agg(ca.achievement_object ORDER BY ca.created_at ASC)
+                        FROM campaign_achievements ca
+                        WHERE ca.campaign_id = uco.campaign_id
+                    ),
+                    '[]'::json
+                ) as achievements,
                 COALESCE(
                     (
                         SELECT json_agg(
