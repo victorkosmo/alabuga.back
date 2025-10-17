@@ -134,7 +134,7 @@ const getMissionById = async (req, res, next) => {
                 AND EXISTS (SELECT 1 FROM campaign_check);
         `;
 
-        const { rows } = await pool.query(query, [userId, campaignId]);
+        const { rows } = await pool.query(query, [userId, missionId, campaignId]);
 
         if (rows.length === 0) {
             const err = new Error('Mission not found or you are not a participant of this campaign.');
