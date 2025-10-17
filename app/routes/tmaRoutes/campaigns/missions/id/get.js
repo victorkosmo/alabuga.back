@@ -61,9 +61,9 @@ const getMissionById = async (req, res, next) => {
             WITH user_data AS (
                 SELECT
                     u.id as user_id,
-                    r.sequence_order as user_rank_order
+                    COALESCE(r.priority, -1) as user_rank_priority
                 FROM users u
-                JOIN ranks r ON u.rank_id = r.id
+                LEFT JOIN ranks r ON u.rank_id = r.id
                 WHERE u.id = $1
             ),
             campaign_check AS (
@@ -75,14 +75,14 @@ const getMissionById = async (req, res, next) => {
                 ach.name as required_achievement_name,
                 CASE WHEN mc.id IS NOT NULL THEN true ELSE false END as is_completed,
                 CASE
-                    WHEN r_req.sequence_order > (SELECT user_rank_order FROM user_data) THEN true
+                    WHEN r_req.id IS NOT NULL AND COALESCE(r_req.priority, -1) > (SELECT user_rank_priority FROM user_data) THEN true
                     WHEN m.required_achievement_id IS NOT NULL AND ua.user_id IS NULL THEN true
                     ELSE false
                 END as is_locked,
                 mmd.submission_prompt, mmd.placeholder_text,
                 mqd.questions, mqd.pass_threshold
             FROM missions m
-            JOIN ranks r_req ON m.required_rank_id = r_req.id
+            LEFT JOIN ranks r_req ON m.required_rank_id = r_req.id
             LEFT JOIN mission_completions mc ON m.id = mc.mission_id AND mc.user_id = $1 AND mc.status = 'APPROVED'
             LEFT JOIN mission_manual_details mmd ON m.id = mmd.mission_id AND m.type = 'MANUAL_URL'
             LEFT JOIN mission_quiz_details mqd ON m.id = mqd.mission_id AND m.type = 'QUIZ'

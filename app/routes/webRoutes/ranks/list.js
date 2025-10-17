@@ -8,7 +8,7 @@ const pool = require('@db');
  *     tags:
  *       - Ranks
  *     summary: List all ranks
- *     description: Retrieve a paginated list of all ranks, ordered by their sequence. Requires authentication.
+ *     description: Retrieve a paginated list of all ranks, ordered by their priority. Requires authentication.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -74,7 +74,7 @@ const listRanks = async (req, res, next) => {
         const dataPromise = pool.query(
             `SELECT * FROM ranks 
              WHERE deleted_at IS NULL 
-             ORDER BY sequence_order ASC 
+             ORDER BY priority ASC 
              LIMIT $1 OFFSET $2`,
             [limit, offset]
         );

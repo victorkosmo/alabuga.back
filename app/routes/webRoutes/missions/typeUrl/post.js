@@ -67,7 +67,6 @@ const { isUUID } = require('validator');
  *               properties:
  *                 success:
  *                   type: boolean
- *                   example: true
  *                 data:
  *                   allOf:
  *                     - $ref: '#/components/schemas/Mission'
@@ -122,16 +121,11 @@ const createUrlMission = async (req, res, next) => {
     try {
         await client.query('BEGIN');
 
-        const rankQuery = 'SELECT id FROM ranks WHERE deleted_at IS NULL ORDER BY sequence_order ASC LIMIT 1';
+        // Fetch the ID of the lowest priority rank to use as default, if any exist.
+        // If no ranks exist, defaultRankId will be null, allowing missions without rank requirements.
+        const rankQuery = 'SELECT id FROM ranks WHERE deleted_at IS NULL ORDER BY priority ASC LIMIT 1';
         const rankResult = await client.query(rankQuery);
-
-        if (rankResult.rowCount === 0) {
-            const err = new Error('No ranks found in the system. Cannot create a mission.');
-            err.statusCode = 400;
-            err.code = 'NO_RANKS_FOUND';
-            throw err;
-        }
-        const defaultRankId = rankResult.rows[0].id;
+        const defaultRankId = rankResult.rowCount > 0 ? rankResult.rows[0].id : null;
 
         const missionQuery = `
             INSERT INTO missions (

@@ -88,7 +88,6 @@ const pool = require('@db');
  *                                       avatar_url:
  *                                         type: string
  *                                         format: uri
- *                                         nullable: true
  *                                       first_name:
  *                                         type: string
  *                                       last_name:
@@ -110,9 +109,9 @@ const listAvailableMissions = async (req, res, next) => {
             WITH user_info AS (
                 SELECT
                     u.id as user_id,
-                    r.sequence_order as user_rank_order
+                    COALESCE(r.priority, -1) as user_rank_order
                 FROM users u
-                JOIN ranks r ON u.rank_id = r.id
+                LEFT JOIN ranks r ON u.rank_id = r.id
                 WHERE u.id = $1
             ),
             user_campaigns_ordered AS (
@@ -168,17 +167,17 @@ const listAvailableMissions = async (req, res, next) => {
                     m.type,
                     m.required_achievement_id,
                     ach.name as required_achievement_name,
-                    r_req.sequence_order as required_rank_order,
+                    COALESCE(r_req.priority, 9999) as required_rank_order, -- Use a high number for missions without rank requirement
                     COALESCE(mcs.total_completions, 0)::INTEGER as total_completions,
                     COALESCE(mcs.completed_by, '[]'::json) as completed_by,
                     CASE
-                        WHEN r_req.sequence_order > (SELECT user_rank_order FROM user_info) THEN true
+                        WHEN r_req.id IS NOT NULL AND r_req.priority > (SELECT user_rank_order FROM user_info) THEN true
                         WHEN m.required_achievement_id IS NOT NULL AND ua.user_id IS NULL THEN true
                         ELSE false
                     END as is_locked
                 FROM
                     missions m
-                JOIN
+                LEFT JOIN
                     ranks r_req ON m.required_rank_id = r_req.id
                 LEFT JOIN
                     achievements ach ON m.required_achievement_id = ach.id
@@ -219,7 +218,7 @@ const listAvailableMissions = async (req, res, next) => {
                                     'completed_by', cm.completed_by
                                 )
                             )
-                            ORDER BY cm.is_locked ASC, cm.required_rank_order ASC, cm.id ASC
+                            ORDER BY cm.is_locked ASC, COALESCE(cm.required_rank_order, 9999) ASC, cm.id ASC
                         )
                         FROM campaign_missions cm
                         WHERE cm.campaign_id = uco.campaign_id

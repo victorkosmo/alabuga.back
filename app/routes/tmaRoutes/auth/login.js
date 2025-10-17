@@ -72,16 +72,10 @@ const tmaLogin = async (req, res, next) => {
             // User does not exist, create a new one
             // First, get the initial rank
             const { rows: initialRankRows } = await pool.query(
-                'SELECT id FROM ranks ORDER BY sequence_order ASC LIMIT 1'
+                'SELECT id FROM ranks WHERE deleted_at IS NULL ORDER BY priority ASC LIMIT 1'
             );
 
-            if (initialRankRows.length === 0) {
-                const err = new Error('Initial rank not found. Cannot create new user.');
-                err.statusCode = 500;
-                err.code = 'INITIAL_RANK_MISSING';
-                return next(err);
-            }
-            const initialRankId = initialRankRows[0].id;
+            const initialRankId = initialRankRows.length > 0 ? initialRankRows[0].id : null;
 
             // Create new user
             const { rows: newUsers } = await pool.query(
@@ -94,7 +88,7 @@ const tmaLogin = async (req, res, next) => {
                     tgUser.last_name || null,
                     tgUser.username || null,
                     tgUser.photo_url || null,
-                    initialRankId
+                    initialRankId,
                 ]
             );
             user = newUsers[0];

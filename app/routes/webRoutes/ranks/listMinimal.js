@@ -8,7 +8,7 @@ const pool = require('@db');
  *     tags:
  *       - Ranks
  *     summary: List all ranks in a minimal format
- *     description: Retrieves a non-paginated list of all ranks with only their ID and title, ordered by sequence. This is useful for populating dropdowns in a UI. Requires authentication.
+ *     description: Retrieves a non-paginated list of all ranks with only their ID and title, ordered by priority. This is useful for populating dropdowns in a UI. Requires authentication.
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -43,7 +43,7 @@ const pool = require('@db');
 const listMinimalRanks = async (req, res, next) => {
     try {
         const { rows } = await pool.query(
-            'SELECT id, title FROM ranks WHERE deleted_at IS NULL ORDER BY sequence_order ASC'
+            'SELECT id, title FROM ranks WHERE deleted_at IS NULL ORDER BY priority ASC'
         );
 
         res.locals.data = rows;

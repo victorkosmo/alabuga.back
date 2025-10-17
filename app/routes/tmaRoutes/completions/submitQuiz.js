@@ -106,17 +106,17 @@ const submitQuizMission = async (req, res, next) => {
             WITH mission_data AS (
                 SELECT 
                     m.id, m.title, m.campaign_id, m.type, m.experience_reward, m.mana_reward, m.competency_rewards,
-                    r.sequence_order as required_rank,
+                    COALESCE(r.priority, -1) as required_rank,
                     mqd.questions, mqd.pass_threshold
                 FROM missions m
-                JOIN ranks r ON m.required_rank_id = r.id
+                LEFT JOIN ranks r ON m.required_rank_id = r.id
                 JOIN mission_quiz_details mqd ON m.id = mqd.mission_id
                 WHERE m.id = $1 AND m.deleted_at IS NULL
             ),
             user_data AS (
                 SELECT 
                     u.tg_id,
-                    r.sequence_order as user_rank,
+                    COALESCE(r.priority, -1) as user_rank,
                     EXISTS(
                         SELECT 1 FROM user_campaigns uc 
                         WHERE uc.user_id = $2 AND uc.campaign_id = (SELECT campaign_id FROM mission_data)
@@ -126,7 +126,7 @@ const submitQuizMission = async (req, res, next) => {
                         WHERE user_id = $2 AND mission_id = $1 AND status = 'APPROVED'
                     ) as is_already_completed
                 FROM users u
-                JOIN ranks r ON u.rank_id = r.id
+                LEFT JOIN ranks r ON u.rank_id = r.id
                 WHERE u.id = $2
             )
             SELECT * FROM mission_data, user_data;
@@ -157,7 +157,8 @@ const submitQuizMission = async (req, res, next) => {
             throw err;
         }
 
-        if (check.user_rank < check.required_rank) {
+        // Check if required_rank is set and user's rank is lower
+        if (check.required_rank > -1 && check.user_rank < check.required_rank) {
             const err = new Error('Your rank is too low to attempt this mission.');
             err.statusCode = 403;
             err.code = 'RANK_INSUFFICIENT';
