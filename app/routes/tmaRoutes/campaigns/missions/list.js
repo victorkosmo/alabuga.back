@@ -9,9 +9,8 @@ const { isUUID } = require('validator');
  *       - Campaigns (TMA)
  *     summary: List available and locked missions for a campaign
  *     description: |
- *       Retrieves a list of available and locked missions for a specific campaign, tailored for the authenticated user.
- *       Completed missions are not included in the list.
- *       It includes a flag indicating if a mission is locked due to rank or achievement requirements.
+ *       Retrieves a list of all missions for a specific campaign, tailored for the authenticated user.
+ *       It includes flags indicating if a mission is locked or has been completed.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -75,6 +74,9 @@ const { isUUID } = require('validator');
  *                       is_locked:
  *                         type: boolean
  *                         description: True if the user's rank is too low or they haven't earned a required achievement.
+ *                       is_completed:
+ *                         type: boolean
+ *                         description: True if the user has successfully completed this mission.
  *                 message:
  *                   type: string
  *                   example: "Campaign missions retrieved successfully."
@@ -144,7 +146,8 @@ const listCampaignMissions = async (req, res, next) => {
                     WHEN r_req.id IS NOT NULL AND r_req.priority > (SELECT priority FROM user_rank) THEN true
                     WHEN m.required_achievement_id IS NOT NULL AND ua.user_id IS NULL THEN true
                     ELSE false
-                END as is_locked
+                END as is_locked,
+                CASE WHEN mc.status = 'APPROVED' THEN true ELSE false END as is_completed
             FROM
                 missions m
             LEFT JOIN
@@ -158,9 +161,8 @@ const listCampaignMissions = async (req, res, next) => {
             WHERE
                 m.campaign_id = $2
                 AND m.deleted_at IS NULL
-                AND (mc.status IS NULL OR mc.status != 'APPROVED')
             ORDER BY
-                is_locked ASC, COALESCE(r_req.priority, 9999) ASC, m.created_at ASC;
+                is_completed ASC, is_locked ASC, COALESCE(r_req.priority, 9999) ASC, m.created_at ASC;
         `;
 
         const { rows } = await pool.query(missionsQuery, [userId, campaignId]);
