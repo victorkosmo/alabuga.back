@@ -66,6 +66,11 @@ const { isUUID } = require('validator');
  *                         type: string
  *                         nullable: true
  *                         description: The name of the achievement required to unlock this mission.
+ *                       required_achievement_image_url:
+ *                         type: string
+ *                         format: uri
+ *                         nullable: true
+ *                         description: The image URL of the achievement required to unlock this mission.
  *                       submission_status:
  *                         type: string
  *                         enum: [PENDING_REVIEW, APPROVED, REJECTED]
@@ -135,6 +140,7 @@ const listCampaignMissions = async (req, res, next) => {
                 m.type,
                 m.required_achievement_id,
                 ach.name as required_achievement_name,
+                ach.image_url as required_achievement_image_url,
                 mc.status as submission_status,
                 CASE
                     WHEN m.required_achievement_id IS NOT NULL AND ua.user_id IS NULL THEN true

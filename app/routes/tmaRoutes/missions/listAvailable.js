@@ -72,6 +72,11 @@ const pool = require('@db');
  *                             required_achievement_name:
  *                               type: string
  *                               nullable: true
+ *                             required_achievement_image_url:
+ *                               type: string
+ *                               format: uri
+ *                               nullable: true
+ *                               description: The image URL of the achievement required to unlock this mission.
  *                             submission_status:
  *                               type: string
  *                               enum: [PENDING_REVIEW, APPROVED, REJECTED]
@@ -185,6 +190,7 @@ const listAvailableMissions = async (req, res, next) => {
                     m.type,
                     m.required_achievement_id,
                     ach.name as required_achievement_name,
+                    ach.image_url as required_achievement_image_url,
                     luc.status as submission_status,
                     COALESCE(r_req.priority, 9999) as required_rank_order, -- Use a high number for missions without rank requirement
                     COALESCE(mcs.total_completions, 0)::INTEGER as total_completions,
@@ -234,6 +240,7 @@ const listAvailableMissions = async (req, res, next) => {
                                 'type', cm.type,
                                 'required_achievement_id', cm.required_achievement_id,
                                 'required_achievement_name', cm.required_achievement_name,
+                                'required_achievement_image_url', cm.required_achievement_image_url,
                                 'submission_status', cm.submission_status,
                                 'is_locked', cm.is_locked,
                                 'completion_stats', json_build_object(
