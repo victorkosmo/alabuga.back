@@ -72,6 +72,11 @@ const pool = require('@db');
  *                             required_achievement_name:
  *                               type: string
  *                               nullable: true
+ *                             submission_status:
+ *                               type: string
+ *                               enum: [PENDING_REVIEW, APPROVED, REJECTED]
+ *                               nullable: true
+ *                               description: The status of the user's latest submission for this mission. Null if no submission has been made.
  *                             is_locked:
  *                               type: boolean
  *                             completion_stats:
@@ -129,6 +134,14 @@ const listAvailableMissions = async (req, res, next) => {
                 JOIN campaigns c ON uc.campaign_id = c.id
                 WHERE uc.user_id = $1 AND c.status = 'ACTIVE' AND c.deleted_at IS NULL
             ),
+            latest_user_completions AS (
+                SELECT
+                    mission_id,
+                    status,
+                    ROW_NUMBER() OVER(PARTITION BY mission_id ORDER BY created_at DESC) as rn
+                FROM mission_completions
+                WHERE user_id = $1
+            ),
             mission_completers_ranked AS (
                 SELECT
                     mc.mission_id,
@@ -172,6 +185,7 @@ const listAvailableMissions = async (req, res, next) => {
                     m.type,
                     m.required_achievement_id,
                     ach.name as required_achievement_name,
+                    luc.status as submission_status,
                     COALESCE(r_req.priority, 9999) as required_rank_order, -- Use a high number for missions without rank requirement
                     COALESCE(mcs.total_completions, 0)::INTEGER as total_completions,
                     COALESCE(mcs.completed_by, '[]'::json) as completed_by,
@@ -190,6 +204,8 @@ const listAvailableMissions = async (req, res, next) => {
                     user_achievements ua ON m.required_achievement_id = ua.achievement_id AND ua.user_id = $1
                 LEFT JOIN
                     mission_completion_stats mcs ON m.id = mcs.mission_id
+                LEFT JOIN
+                    latest_user_completions luc ON m.id = luc.mission_id AND luc.rn = 1
                 WHERE
                     m.campaign_id IN (SELECT campaign_id FROM user_campaigns_ordered)
                     AND m.deleted_at IS NULL
@@ -218,6 +234,7 @@ const listAvailableMissions = async (req, res, next) => {
                                 'type', cm.type,
                                 'required_achievement_id', cm.required_achievement_id,
                                 'required_achievement_name', cm.required_achievement_name,
+                                'submission_status', cm.submission_status,
                                 'is_locked', cm.is_locked,
                                 'completion_stats', json_build_object(
                                     'total_completions', cm.total_completions,
