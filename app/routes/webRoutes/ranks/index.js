@@ -22,7 +22,7 @@ router.use(authenticateJWT);
  *           format: uuid
  *         title:
  *           type: string
- *         sequence_order:
+ *         priority:
  *           type: integer
  *         unlock_conditions:
  *           type: object

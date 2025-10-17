@@ -75,15 +75,15 @@ const submitUrlMission = async (req, res, next) => {
         // 1. Fetch mission, user rank, and campaign participation in one go
         const validationQuery = `
             WITH mission_details AS (
-                SELECT m.id, m.campaign_id, m.type, r.sequence_order as required_rank
+                SELECT m.id, m.campaign_id, m.type, r.priority as required_rank
                 FROM missions m
                 JOIN ranks r ON m.required_rank_id = r.id
                 WHERE m.id = $1 AND m.deleted_at IS NULL
             ),
             user_details AS (
-                SELECT r.sequence_order as user_rank
+                SELECT COALESCE(r.priority, -1) as user_rank
                 FROM users u
-                JOIN ranks r ON u.rank_id = r.id
+                LEFT JOIN ranks r ON u.rank_id = r.id
                 WHERE u.id = $2
             )
             SELECT 

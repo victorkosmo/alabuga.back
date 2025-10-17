@@ -43,7 +43,7 @@ const pool = require('@db');
 const listMinimalRanks = async (req, res, next) => {
     try {
         const { rows } = await pool.query(
-            'SELECT id, title FROM ranks WHERE deleted_at IS NULL ORDER BY sequence_order ASC'
+            'SELECT id, title FROM ranks WHERE deleted_at IS NULL ORDER BY priority ASC'
         );
 
         res.locals.data = rows;

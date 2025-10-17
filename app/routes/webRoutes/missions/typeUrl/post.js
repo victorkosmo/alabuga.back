@@ -122,7 +122,7 @@ const createUrlMission = async (req, res, next) => {
     try {
         await client.query('BEGIN');
 
-        const rankQuery = 'SELECT id FROM ranks WHERE deleted_at IS NULL ORDER BY sequence_order ASC LIMIT 1';
+        const rankQuery = 'SELECT id FROM ranks WHERE deleted_at IS NULL ORDER BY priority ASC LIMIT 1';
         const rankResult = await client.query(rankQuery);
 
         if (rankResult.rowCount === 0) {

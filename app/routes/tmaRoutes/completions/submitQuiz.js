@@ -106,7 +106,7 @@ const submitQuizMission = async (req, res, next) => {
             WITH mission_data AS (
                 SELECT 
                     m.id, m.title, m.campaign_id, m.type, m.experience_reward, m.mana_reward, m.competency_rewards,
-                    r.sequence_order as required_rank,
+                    r.priority as required_rank,
                     mqd.questions, mqd.pass_threshold
                 FROM missions m
                 JOIN ranks r ON m.required_rank_id = r.id
@@ -116,7 +116,7 @@ const submitQuizMission = async (req, res, next) => {
             user_data AS (
                 SELECT 
                     u.tg_id,
-                    r.sequence_order as user_rank,
+                    COALESCE(r.priority, -1) as user_rank,
                     EXISTS(
                         SELECT 1 FROM user_campaigns uc 
                         WHERE uc.user_id = $2 AND uc.campaign_id = (SELECT campaign_id FROM mission_data)
@@ -126,7 +126,7 @@ const submitQuizMission = async (req, res, next) => {
                         WHERE user_id = $2 AND mission_id = $1 AND status = 'APPROVED'
                     ) as is_already_completed
                 FROM users u
-                JOIN ranks r ON u.rank_id = r.id
+                LEFT JOIN ranks r ON u.rank_id = r.id
                 WHERE u.id = $2
             )
             SELECT * FROM mission_data, user_data;

@@ -110,9 +110,9 @@ const listAvailableMissions = async (req, res, next) => {
             WITH user_info AS (
                 SELECT
                     u.id as user_id,
-                    r.sequence_order as user_rank_order
+                    COALESCE(r.priority, -1) as user_rank_order
                 FROM users u
-                JOIN ranks r ON u.rank_id = r.id
+                LEFT JOIN ranks r ON u.rank_id = r.id
                 WHERE u.id = $1
             ),
             user_campaigns_ordered AS (
@@ -168,11 +168,11 @@ const listAvailableMissions = async (req, res, next) => {
                     m.type,
                     m.required_achievement_id,
                     ach.name as required_achievement_name,
-                    r_req.sequence_order as required_rank_order,
+                    r_req.priority as required_rank_order,
                     COALESCE(mcs.total_completions, 0)::INTEGER as total_completions,
                     COALESCE(mcs.completed_by, '[]'::json) as completed_by,
                     CASE
-                        WHEN r_req.sequence_order > (SELECT user_rank_order FROM user_info) THEN true
+                        WHEN r_req.priority > (SELECT user_rank_order FROM user_info) THEN true
                         WHEN m.required_achievement_id IS NOT NULL AND ua.user_id IS NULL THEN true
                         ELSE false
                     END as is_locked
