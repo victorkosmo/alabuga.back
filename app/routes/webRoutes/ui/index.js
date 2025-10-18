@@ -16,9 +16,11 @@ router.use(authenticateJWT);
 const achievementsRouter = require('./achievements');
 const missionsRouter = require('./missions');
 const competenciesRouter = require('./competencies');
+const campaignsRouter = require('./campaigns');
 
 router.use('/achievements', achievementsRouter);
 router.use('/missions', missionsRouter);
 router.use('/competencies', competenciesRouter);
+router.use('/campaigns', campaignsRouter);
 
 module.exports = router;
