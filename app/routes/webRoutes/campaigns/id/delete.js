@@ -59,7 +59,7 @@ const deleteCampaign = async (req, res, next) => {
 
         // Check for relations in missions table
         const relationCheck = await pool.query(
-            'SELECT 1 FROM missions WHERE campaign_id = $1 LIMIT 1',
+            'SELECT 1 FROM missions WHERE campaign_id = $1 AND deleted_at IS NULL LIMIT 1',
             [id]
         );
 

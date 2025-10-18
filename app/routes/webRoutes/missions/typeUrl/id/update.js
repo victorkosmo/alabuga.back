@@ -2,6 +2,25 @@
 const pool = require('@db');
 const { isUUID } = require('validator');
 
+const validateCompetencyRewards = (rewards) => {
+    if (rewards === undefined || rewards === null) return null; // Optional, can be null to clear
+    if (!Array.isArray(rewards)) {
+        return 'competency_rewards must be an array.';
+    }
+    for (const reward of rewards) {
+        if (typeof reward !== 'object' || reward === null) {
+            return 'Each item in competency_rewards must be an object.';
+        }
+        if (!reward.competency_id || !isUUID(reward.competency_id)) {
+            return `Invalid or missing competency_id in competency_rewards. It must be a UUID.`;
+        }
+        if (typeof reward.points !== 'number' || !Number.isInteger(reward.points) || reward.points <= 0) {
+            return `Invalid or missing points for competency ${reward.competency_id}. It must be a positive integer.`;
+        }
+    }
+    return null; // All good
+};
+
 /**
  * @swagger
  * /web/missions/type-url/{id}:
@@ -34,6 +53,9 @@ const { isUUID } = require('validator');
  *                 nullable: true
  *               category:
  *                 type: string
+ *               cover_url:
+ *                 type: string
+ *                 nullable: true
  *               required_achievement_id:
  *                 type: string
  *                 format: uuid
@@ -47,6 +69,21 @@ const { isUUID } = require('validator');
  *               placeholder_text:
  *                 type: string
  *                 nullable: true
+ *               competency_rewards:
+ *                 type: array
+ *                 nullable: true
+ *                 description: "Array of competency points to award upon completion. Can be set to null to clear."
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     competency_id:
+ *                       type: string
+ *                       format: uuid
+ *                     points:
+ *                       type: integer
+ *                 example:
+ *                   - competency_id: "a1b2c3d4-e5f6-7890-1234-567890abcdef"
+ *                     points: 10
  *     responses:
  *       200:
  *         description: Mission updated successfully.
@@ -104,7 +141,17 @@ const updateUrlMission = async (req, res, next) => {
         return next(err);
     }
 
-    const missionFields = ['title', 'description', 'category', 'required_achievement_id', 'experience_reward', 'mana_reward'];
+    if (body.competency_rewards !== undefined) {
+        const competencyRewardsError = validateCompetencyRewards(body.competency_rewards);
+        if (competencyRewardsError) {
+            const err = new Error(competencyRewardsError);
+            err.statusCode = 400;
+            err.code = 'VALIDATION_ERROR';
+            return next(err);
+        }
+    }
+
+    const missionFields = ['title', 'description', 'category', 'required_achievement_id', 'experience_reward', 'mana_reward', 'cover_url', 'competency_rewards'];
     const detailFields = ['submission_prompt', 'placeholder_text'];
 
     const missionUpdates = {};
@@ -130,6 +177,9 @@ const updateUrlMission = async (req, res, next) => {
 
         // Update missions table
         if (Object.keys(missionUpdates).length > 0) {
+            if (missionUpdates.competency_rewards !== undefined) {
+                missionUpdates.competency_rewards = JSON.stringify(missionUpdates.competency_rewards);
+            }
             const setClauses = Object.keys(missionUpdates).map((key, i) => `${key} = $${i + 1}`).join(', ');
             const queryParams = [...Object.values(missionUpdates), id];
             const updateMissionQuery = `

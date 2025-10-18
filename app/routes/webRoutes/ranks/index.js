@@ -2,10 +2,16 @@
 const express = require('express');
 const router = express.Router();
 const { authenticateJWT } = require('@middleware/authenticateJWT');
+const multer = require('multer');
+
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
 // Import route handlers
 const listRanks = require('./list');
 const listMinimalRanks = require('./listMinimal');
+const createRank = require('./post');
+const idRouter = require('./id');
 
 // Authentication middleware for all rank routes
 router.use(authenticateJWT);
@@ -22,6 +28,13 @@ router.use(authenticateJWT);
  *           format: uuid
  *         title:
  *           type: string
+ *         description:
+ *           type: string
+ *           nullable: true
+ *         image_url:
+ *           type: string
+ *           format: url
+ *           nullable: true
  *         priority:
  *           type: integer
  *         unlock_conditions:
@@ -42,5 +55,7 @@ router.use(authenticateJWT);
 // Define routes
 router.get('/', listRanks);
 router.get('/minimal', listMinimalRanks);
+router.post('/', upload.single('image'), createRank);
+router.use('/:id', idRouter);
 
 module.exports = router;

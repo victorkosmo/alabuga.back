@@ -51,6 +51,11 @@ router.use(authenticateJWT);
  *           nullable: true
  *           description: Maximum number of participants. Null for unlimited.
  *           example: 100
+ *         icon_url:
+ *           type: string
+ *           nullable: true
+ *           description: "URL to the campaign icon/logo image for visual identification"
+ *           example: "https://minio.example.com/bucket/icons/a1b2c3d4-e5f6-7890-1234-567890abcdef.png"
  *         cover_url:
  *           type: string
  *           nullable: true

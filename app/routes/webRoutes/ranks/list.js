@@ -68,16 +68,14 @@ const listRanks = async (req, res, next) => {
 
         const offset = (page - 1) * limit;
 
-        const countPromise = pool.query(
-            'SELECT COUNT(*) FROM ranks WHERE deleted_at IS NULL'
-        );
-        const dataPromise = pool.query(
-            `SELECT * FROM ranks 
-             WHERE deleted_at IS NULL 
+        const countQuery = 'SELECT COUNT(*) FROM ranks WHERE deleted_at IS NULL';
+        const countPromise = pool.query(countQuery);
+
+        const dataQuery = `SELECT * FROM ranks 
+             WHERE deleted_at IS NULL
              ORDER BY priority ASC 
-             LIMIT $1 OFFSET $2`,
-            [limit, offset]
-        );
+             LIMIT $1 OFFSET $2`;
+        const dataPromise = pool.query(dataQuery, [limit, offset]);
 
         const [countResult, dataResult] = await Promise.all([countPromise, dataPromise]);
 

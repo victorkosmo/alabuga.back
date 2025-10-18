@@ -2,6 +2,25 @@
 const pool = require('@db');
 const { isUUID } = require('validator');
 
+const validateCompetencyRewards = (rewards) => {
+    if (rewards === undefined || rewards === null) return null; // Optional, can be null to clear
+    if (!Array.isArray(rewards)) {
+        return 'competency_rewards must be an array.';
+    }
+    for (const reward of rewards) {
+        if (typeof reward !== 'object' || reward === null) {
+            return 'Each item in competency_rewards must be an object.';
+        }
+        if (!reward.competency_id || !isUUID(reward.competency_id)) {
+            return `Invalid or missing competency_id in competency_rewards. It must be a UUID.`;
+        }
+        if (typeof reward.points !== 'number' || !Number.isInteger(reward.points) || reward.points <= 0) {
+            return `Invalid or missing points for competency ${reward.competency_id}. It must be a positive integer.`;
+        }
+    }
+    return null; // All good
+};
+
 /**
  * @swagger
  * /web/missions/type-url:
@@ -43,6 +62,21 @@ const { isUUID } = require('validator');
  *                 format: uuid
  *                 nullable: true
  *                 description: Optional achievement that must be earned before this mission becomes available.
+ *               competency_rewards:
+ *                 type: array
+ *                 nullable: true
+ *                 description: "Array of competency points to award upon completion. E.g., [{\"competency_id\": \"uuid\", \"points\": 50}]"
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     competency_id:
+ *                       type: string
+ *                       format: uuid
+ *                     points:
+ *                       type: integer
+ *                 example:
+ *                   - competency_id: "a1b2c3d4-e5f6-7890-1234-567890abcdef"
+ *                     points: 10
  *               experience_reward:
  *                 type: integer
  *                 default: 0
@@ -98,6 +132,7 @@ const createUrlMission = async (req, res, next) => {
         required_achievement_id,
         experience_reward = 0,
         mana_reward = 0,
+        competency_rewards,
         submission_prompt,
         placeholder_text
     } = req.body;
@@ -116,6 +151,13 @@ const createUrlMission = async (req, res, next) => {
         err.code = 'INVALID_ID';
         return next(err);
     }
+    const competencyRewardsError = validateCompetencyRewards(competency_rewards);
+    if (competencyRewardsError) {
+        const err = new Error(competencyRewardsError);
+        err.statusCode = 400;
+        err.code = 'VALIDATION_ERROR';
+        return next(err);
+    }
 
     const client = await pool.connect();
     try {
@@ -130,13 +172,13 @@ const createUrlMission = async (req, res, next) => {
         const missionQuery = `
             INSERT INTO missions (
                 campaign_id, title, description, category, required_rank_id, 
-                required_achievement_id, experience_reward, mana_reward, type, created_by
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'MANUAL_URL', $9)
+                required_achievement_id, experience_reward, mana_reward, type, created_by, competency_rewards
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'MANUAL_URL', $9, $10)
             RETURNING *;
         `;
         const missionParams = [
             campaign_id, title, description, category, defaultRankId,
-            required_achievement_id, experience_reward, mana_reward, created_by
+            required_achievement_id, experience_reward, mana_reward, created_by, competency_rewards ? JSON.stringify(competency_rewards) : null
         ];
         const missionResult = await client.query(missionQuery, missionParams);
         const newMission = missionResult.rows[0];

@@ -6,11 +6,13 @@ const router = express.Router({ mergeParams: true });
 // Import handlers
 const getQuizMission = require('./get');
 const updateQuizMission = require('./update');
+const deleteQuizMission = require('./delete');
 const uploadQuizMissionCover = require('./uploadCover');
 
 // Define routes for /missions/type-quiz/:id
 router.get('/', getQuizMission);
 router.put('/', updateQuizMission);
+router.delete('/', deleteQuizMission);
 router.post('/cover', uploadQuizMissionCover);
 
 module.exports = router;

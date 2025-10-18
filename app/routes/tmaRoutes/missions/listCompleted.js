@@ -37,6 +37,10 @@ const pool = require('@db');
  *                         type: string
  *                         format: uri
  *                         nullable: true
+ *                       campaign_icon_url:
+ *                         type: string
+ *                         format: uri
+ *                         nullable: true
  *                       missions:
  *                         type: array
  *                         items:
@@ -82,6 +86,7 @@ const listCompletedMissions = async (req, res, next) => {
                     uc.campaign_id,
                     c.title as campaign_title,
                     c.cover_url as campaign_cover_url,
+                    c.icon_url as campaign_icon_url,
                     uc.joined_at
                 FROM user_campaigns uc
                 JOIN campaigns c ON uc.campaign_id = c.id
@@ -113,6 +118,7 @@ const listCompletedMissions = async (req, res, next) => {
                 uco.campaign_id,
                 uco.campaign_title,
                 uco.campaign_cover_url,
+                uco.campaign_icon_url,
                 COALESCE(
                     (
                         SELECT json_agg(

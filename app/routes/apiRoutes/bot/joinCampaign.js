@@ -1,5 +1,6 @@
 // app/routes/apiRoutes/bot/joinCampaign.js
 const pool = require('@db');
+const { updateUserRank } = require('@features/rankManager');
 
 /**
  * @swagger
@@ -185,6 +186,9 @@ const joinCampaignByCode = async (req, res, next) => {
             'INSERT INTO user_campaigns (user_id, campaign_id) VALUES ($1, $2)',
             [userId, campaign.id]
         );
+
+        // 7. Update user's rank
+        await updateUserRank(client, userId);
 
         await client.query('COMMIT');
         

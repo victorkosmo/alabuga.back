@@ -42,9 +42,9 @@ const pool = require('@db');
  */
 const listMinimalRanks = async (req, res, next) => {
     try {
-        const { rows } = await pool.query(
-            'SELECT id, title FROM ranks WHERE deleted_at IS NULL ORDER BY priority ASC'
-        );
+        const query = `SELECT id, title FROM ranks WHERE deleted_at IS NULL ORDER BY priority ASC`;
+
+        const { rows } = await pool.query(query);
 
         res.locals.data = rows;
         res.locals.message = 'Minimal rank list retrieved successfully.';

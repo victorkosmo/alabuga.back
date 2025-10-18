@@ -1,5 +1,6 @@
 // app/features/achievementChecker/index.js
 const { sendTelegramMessage } = require('@features/sendTelegramMsg');
+const { updateUserRank } = require('@features/rankManager');
 
 /**
  * Checks for and awards achievements to a user after a mission completion.
@@ -48,6 +49,8 @@ const checkAndAwardAchievements = async (client, userId, completedMissionId) => 
             return;
         }
 
+        let achievementAwarded = false;
+
         // Step 3: For each relevant achievement, check if all conditions are now met.
         for (const achievement of achievementsResult.rows) {
             const requiredMissions = achievement.unlock_conditions?.required_missions;
@@ -71,6 +74,7 @@ const checkAndAwardAchievements = async (client, userId, completedMissionId) => 
 
             // Step 4: If all required missions are completed, award the achievement.
             if (completedCount === requiredMissions.length) {
+                achievementAwarded = true;
                 console.log(`[AchievementChecker] Awarding achievement "${achievement.name}" (ID: ${achievement.id}) to user ${userId}`);
 
                 // 4a: Insert into user_achievements
@@ -98,6 +102,11 @@ const checkAndAwardAchievements = async (client, userId, completedMissionId) => 
                 // 4d: Send notification (do not await, don't let it fail the transaction)
                 notifyUserOfAchievement(client, userId, achievement);
             }
+        }
+
+        // After the loop, if any achievement was awarded, check for a rank update.
+        if (achievementAwarded) {
+            await updateUserRank(client, userId);
         }
     } catch (error) {
         // Log the error but do not re-throw. The achievement checker should not

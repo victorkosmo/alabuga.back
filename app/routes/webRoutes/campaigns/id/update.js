@@ -53,6 +53,10 @@ const { isUUID } = require('validator');
  *                 type: string
  *                 nullable: true
  *                 description: The updated cover image URL for the campaign. Can be set to null to remove the cover.
+ *               icon_url:
+ *                 type: string
+ *                 nullable: true
+ *                 description: The updated icon image URL for the campaign. Can be set to null to remove the icon.
  *     responses:
  *       200:
  *         description: Campaign updated successfully.
@@ -81,7 +85,7 @@ const { isUUID } = require('validator');
 const updateCampaign = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { title, description, status, start_date, end_date, max_participants, cover_url } = req.body;
+        const { title, description, status, start_date, end_date, max_participants, cover_url, icon_url } = req.body;
 
         if (!isUUID(id)) {
             const err = new Error('Invalid ID format');
@@ -121,6 +125,10 @@ const updateCampaign = async (req, res, next) => {
         if (cover_url !== undefined) {
             updateFields.push(`cover_url = $${paramIndex++}`);
             queryParams.push(cover_url);
+        }
+        if (icon_url !== undefined) {
+            updateFields.push(`icon_url = $${paramIndex++}`);
+            queryParams.push(icon_url);
         }
 
         if (updateFields.length === 0) {
