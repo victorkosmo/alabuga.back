@@ -2,6 +2,7 @@
 const pool = require('@db');
 const { checkAndAwardAchievements } = require('@features/achievementChecker');
 const { sendTelegramMessage } = require('@features/sendTelegramMsg');
+const { awardCompetencyPoints } = require('@features/competencyAwarder');
 
 /**
  * @swagger
@@ -150,6 +151,9 @@ const completeQrMission = async (req, res, next) => {
 
         // 4c. Check for and award any achievements this completion might unlock
         await checkAndAwardAchievements(client, userId, missionId);
+
+        // 4d. Award competency points
+        await awardCompetencyPoints(client, userId, missionId);
 
         await client.query('COMMIT');
 
