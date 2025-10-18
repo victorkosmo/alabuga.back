@@ -1,4 +1,5 @@
 const pool = require('@db');
+const { updateUserRank } = require('@features/rankManager');
 
 /**
  * @swagger
@@ -139,6 +140,9 @@ const joinCampaign = async (req, res, next) => {
             'INSERT INTO user_campaigns (user_id, campaign_id) VALUES ($1, $2)',
             [userId, campaign.id]
         );
+
+        // Update user's rank
+        await updateUserRank(client, userId);
 
         // Fetch the full campaign details to return
         const { rows: finalCampaignRows } = await client.query(
