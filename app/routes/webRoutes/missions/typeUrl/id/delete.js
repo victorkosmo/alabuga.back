@@ -23,19 +23,8 @@ const { isUUID } = require('validator');
  *           format: uuid
  *         description: The UUID of the mission to delete.
  *     responses:
- *       200:
- *         description: Mission deleted successfully.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "Mission deleted successfully."
+ *       204:
+ *         description: Mission deleted successfully. No content.
  *       400:
  *         description: Bad request, e.g., mission has completions and cannot be deleted.
  *         content:
@@ -94,7 +83,7 @@ const deleteUrlMission = async (req, res, next) => {
 
         await client.query('COMMIT');
 
-        res.locals.message = 'Mission deleted successfully.';
+        res.locals.statusCode = 204;
         next();
 
     } catch (err) {
