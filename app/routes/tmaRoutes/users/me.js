@@ -46,6 +46,9 @@ const pool = require('@db');
  *                       format: uuid
  *                     rank_title:
  *                       type: string
+ *                     rank_image_url:
+ *                       type: string
+ *                       format: url
  *                 message:
  *                   type: string
  *                   example: "Current user profile retrieved successfully"
@@ -71,10 +74,11 @@ const getCurrentUser = async (req, res, next) => {
                 u.experience_points,
                 u.mana_points,
                 u.rank_id,
-                r.title as rank_title
+                r.title as rank_title,
+                r.image_url as rank_image_url
             FROM
                 users u
-            JOIN
+            LEFT JOIN
                 ranks r ON u.rank_id = r.id
             WHERE
                 u.id = $1 AND u.deleted_at IS NULL
