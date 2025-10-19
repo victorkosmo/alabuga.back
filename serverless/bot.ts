@@ -69,7 +69,7 @@ async function sendTelegramPhotoWithButton(
           inline_keyboard: [
             [
               {
-                text: "🚀 Открыть кампанию",
+                text: "🚀 К миссиям",
                 web_app: { url: buttonUrl },
               },
             ],
@@ -98,7 +98,7 @@ async function sendCampaignJoinConfirmation(
   coverUrl: string | undefined,
   tmaUrl: string
 ) {
-  const successMessage = `Поздравляем! Вы присоединились к кампании «${campaignTitle}»!`;
+  const successMessage = `Поздравляем! Вы присоединились к событию «${campaignTitle}»!`;
 
   // Fallback 1: Try to send Photo with Button
   if (coverUrl) {
@@ -117,7 +117,7 @@ async function sendCampaignJoinConfirmation(
       inline_keyboard: [
         [
           {
-            text: "🚀 Открыть кампанию",
+            text: "🚀 К миссиям",
             web_app: { url: tmaUrl },
           },
         ],

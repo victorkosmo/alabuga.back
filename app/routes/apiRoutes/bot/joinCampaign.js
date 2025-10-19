@@ -192,7 +192,7 @@ const joinCampaignByCode = async (req, res, next) => {
 
         await client.query('COMMIT');
         
-        const tmaUrl = `${process.env.TMA_URL}/campaign/${campaign.id}`;
+        const tmaUrl = `${process.env.TMA_URL}`;
 
         res.locals.data = {
             campaign_id: campaign.id,
