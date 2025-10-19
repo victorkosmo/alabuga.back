@@ -3,9 +3,9 @@ const express = require('express');
 const router = express.Router();
 
 // Import route handlers
-const getByCode = require('./getByCode');
+const getById = require('./getById');
 
 // Define routes
-router.get('/:completion_code', getByCode);
+router.get('/:id', getById);
 
 module.exports = router;
